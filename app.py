@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from io import StringIO
+from kagglehub import kagglehub
 st.title("Data Fusion Pipeline")
 
 options = ["Link", "Upload"]
@@ -11,21 +12,40 @@ selection = st.segmented_control(
 # Initialize the session state key if it doesn't exist
 if "user_input" not in st.session_state:
     st.session_state.user_input = ""
-if "links" not in st.session_state:
-    st.session_state.links = []
+if "datasets" not in st.session_state:
+    st.session_state.datasets = {}
     
-def clear_input():
-    st.session_state.links.append(st.session_state.user_input)
-    st.session_state.user_input = ""
+def import_kaggle_data(dataset):
+    """Import a dataset from Kaggle and return the DataFrame."""
+    print(f"Importing dataset: {dataset}")
+    path = kagglehub.dataset_download(dataset)
+    return path
+    
+def import_data(links):
+    if not links == "": 
+        res = links.split(r'https://')
+        datasets = {}
+        for i in res:
+            if i == "":
+                continue
+            if 'kaggle' in i.strip() and 'datasets' in i.strip():
+                dataset_name = i.strip().split('datasets/')[1]
+                datasets[dataset_name] = None
+                datasets[dataset_name] = import_kaggle_data(dataset_name)
+            else:
+                print('not a kaggle link:', i)
+        st.session_state.datasets = datasets
+        st.session_state.user_input = links
+        print(st.session_state.user_input)
     
 if not selection or "Link" in selection:
-    col1, col2 = st.columns([4, 1], vertical_alignment="bottom")
-    with col1:
-        st.text_input("Link to data source", placeholder="https://example.com/data.csv", key="user_input")
-    with col2:
-        st.button("Import", on_click=clear_input)
-    for link in st.session_state.links:
-        st.write(link)
+    links = st.text_area("Link to data source", st.session_state.user_input, placeholder="https://example.com/data.csv")
+    st.button("Import", on_click=lambda: import_data(links))
+    st.write("Valid datasets imported from links:")
+    for dataset_name, dataset_path in st.session_state.datasets.items():
+        if dataset_path:
+            st.write(dataset_name)
+
 
 else:
     uploaded_files = st.file_uploader(
