@@ -32,6 +32,9 @@ if "rules" not in st.session_state:
 
 if "total_rules" not in st.session_state:
     st.session_state.total_rules = 0
+    
+if "cast" not in st.session_state:
+    st.session_state.cast = {}
 
     
 # # Initialize Spark

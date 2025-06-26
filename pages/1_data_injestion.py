@@ -100,7 +100,7 @@ def import_data(links):
             else:
                 print(f"Importing dataset: {dataset_name} from {dataset_path}")
                 view_name = "_".join(dataset_name.split('.')[0].lower().split(' ')).replace("-", "_").replace(".", "_")
-                view_name = "table_" + view_name
+                view_name = "view_" + view_name
                 st.session_state.views[dataset_name] = {"view_name": view_name }
                 st.session_state.datasets[dataset_name] = st.session_state.spark.read.csv(dataset_path, header=True, inferSchema=True, nullValue='NA')
                 st.session_state.datasets[dataset_name].createOrReplaceTempView(view_name)
