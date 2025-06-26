@@ -18,6 +18,10 @@ if "datasets" not in st.session_state:
     st.session_state.datasets = {}
     st.session_state.dataset_paths = {}
     
+
+if 'temp_datasets' not in st.session_state:
+    st.session_state.temp_datasets = {}
+    
 if "views" not in st.session_state:
     st.session_state.views = {}
 

@@ -103,8 +103,8 @@ def import_data(links):
                 view_name = "view_" + view_name
                 st.session_state.views[dataset_name] = {"view_name": view_name }
                 st.session_state.datasets[dataset_name] = st.session_state.spark.read.csv(dataset_path, header=True, inferSchema=True, nullValue='NA')
-                st.session_state.datasets[dataset_name].createOrReplaceTempView(view_name)
-                print(st.session_state.datasets[dataset_name].show(1))
+                st.session_state.temp_datasets[dataset_name] = st.session_state.datasets[dataset_name]
+                st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
         st.session_state.user_input = links
         # print(st.session_state.user_input)
 

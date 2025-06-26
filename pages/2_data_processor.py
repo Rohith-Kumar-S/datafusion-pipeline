@@ -2,8 +2,15 @@ import streamlit as st
 from pyspark.sql import types
 from pyspark.sql.functions import to_date, col
 import random
+        
+def reset_views(dataset_name):
+    print(f"Resetting views for dataset: {dataset_name}")
+    print(st.session_state.datasets[dataset_name].show(1))
+    st.session_state.temp_datasets[dataset_name] = st.session_state.datasets[dataset_name]
+    view_name = st.session_state.views[dataset_name]["view_name"]
+    st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
 
-d, col1, col2 = st.columns(3)
+col1, col2 = st.columns(2)
 
 dtypes_map = { types.IntegerType(): 'int', types.StringType(): 'string', types.DoubleType(): 'double', types.FloatType(): 'float', types.BooleanType(): 'bool', types.TimestampType(): 'timestamp', types.DateType(): 'date', types.LongType(): 'long', types.ShortType(): 'short', types.ByteType(): 'byte' }
 reverse_dtypes_map = {v: k for k, v in dtypes_map.items()}
@@ -18,22 +25,22 @@ def test_rule(rule):
                     if cast_type:
                         try:
                             if cast_type == 'date':
-                                st.session_state.datasets[dataset_name] = st.session_state.datasets[dataset_name].withColumn(column, to_date(col(column), 'MM-dd-yy'))
+                                st.session_state.temp_datasets[dataset_name] = st.session_state.temp_datasets[dataset_name].withColumn(column, to_date(col(column), 'MM-dd-yy'))
                             else:
-                                st.session_state.datasets[dataset_name] = st.session_state.datasets[dataset_name].withColumn(column, st.session_state.datasets[dataset_name][column].cast(reverse_dtypes_map[cast_type]))
+                                st.session_state.temp_datasets[dataset_name] = st.session_state.temp_datasets[dataset_name].withColumn(column, st.session_state.temp_datasets[dataset_name][column].cast(reverse_dtypes_map[cast_type]))
                             view_name = st.session_state.views[dataset_name]["view_name"]
-                            st.session_state.datasets[dataset_name].createOrReplaceTempView(view_name)
+                            st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
                         except Exception as e:
                             st.error(f"Error casting column {column} to {cast_type}: {e}")
     
 
 with col1:
     selected_dataset = st.selectbox("Select Dataset",
-        options=list(st.session_state.datasets.keys()),
+        options=list(st.session_state.temp_datasets.keys()),
         key="selected_dataset",
         help="Select a dataset to process."
     )
-    if list(st.session_state.datasets):
+    if list(st.session_state.temp_datasets):
         options = ["View", "Describe", "Schema", "Visualize"]
         selection = st.segmented_control(
             "Operations", options, selection_mode="single", default="View", key="selection"
@@ -58,14 +65,14 @@ with col1:
                         st.dataframe(df.limit(rows).toPandas())
                     st.session_state.views_query = query
                 else:
-                    st.dataframe(st.session_state.datasets[selected_dataset].limit(10).toPandas())
+                    st.dataframe(st.session_state.temp_datasets[selected_dataset].limit(10).toPandas())
                 
             case "Describe":
-                st.write(st.session_state.datasets[selected_dataset].describe().toPandas())
+                st.write(st.session_state.temp_datasets[selected_dataset].describe().toPandas())
             case "Schema":
                 st.write(f'**{st.session_state.views[selected_dataset]["view_name"]}**')
                 data = []
-                for field in st.session_state.datasets[selected_dataset].schema:
+                for field in st.session_state.temp_datasets[selected_dataset].schema:
                     data.append((field.name, dtypes_map[field.dataType], field.nullable))
                 df = st.session_state.spark.createDataFrame(data, ["field", "type", "nullable"])
                 if df.count() > 10:
@@ -74,11 +81,12 @@ with col1:
                     st.dataframe(df.toPandas())
             
 with col2:
-    if list(st.session_state.datasets):
+    if list(st.session_state.temp_datasets):
         view_name = st.session_state.views[st.session_state.selected_dataset]["view_name"]
         selected_dataset = st.session_state.selected_dataset
-        col1, col2, col3, col4 = st.columns([4, 3, 3, 2], gap="small", vertical_alignment="bottom")
-        rule_selection = col1.segmented_control("Rule builder", ['Create rule', 'Load rule'], selection_mode="single", default='Create rule', key="rule_selection")
+        col1, col2, col3, col4, col5 = st.columns([4,3,2,1.7,2], vertical_alignment="bottom")
+        with col1:
+            rule_selection = st.segmented_control("Rule builder", ['Create rule', 'Load rule'], selection_mode="single", default='Create rule', key="rule_selection")
         rule = f'rule_{st.session_state.total_rules+1}'
         if rule_selection == 'Create rule':
             if rule not in st.session_state.rules:
@@ -92,6 +100,9 @@ with col2:
                 if st.button("Test Rule"):
                     test_rule(rule)
                     pass
+        with col5:
+                if st.button("Reset Views"):
+                    reset_views(selected_dataset)
         
         def update_cast_list(rule, selected_dataset, index, column_to_cast):
             st.session_state.cast[f'cast_type_{column_to_cast}_{index}'] = st.session_state[f'cast_type_{column_to_cast}_{index}']
@@ -100,7 +111,7 @@ with col2:
             st.session_state.rules[rule][selected_dataset][index]['column_map'][column_to_cast] = st.session_state.cast[f'cast_type_{column_to_cast}_{index}']
 
         with st.container(height=512):
-            dataset_columns = st.session_state.datasets[st.session_state.selected_dataset].columns
+            dataset_columns = st.session_state.temp_datasets[st.session_state.selected_dataset].columns
             for i, process in enumerate(st.session_state.rules[rule][selected_dataset] if rule in st.session_state.rules and selected_dataset in st.session_state.rules[rule] else []):
                 col1, col3 = st.columns([2, 1], vertical_alignment="bottom")
                 operation_type = col1.selectbox("Operation", options=['Cast', 'Filter', ''], index=0, key=f"operation_type_{i}")
@@ -127,8 +138,9 @@ with col2:
                         )
                     with col2:
                         key_name = f'cast_type_{column_to_cast}_{i}'
+                        print(st.session_state.temp_datasets[st.session_state.selected_dataset].schema[column_to_cast].dataType)
                         if key_name not in st.session_state.cast:
-                            st.session_state.cast[key_name] = dtypes_map[st.session_state.datasets[st.session_state.selected_dataset].schema[column_to_cast].dataType] if column_to_cast else 'string'
+                            st.session_state.cast[key_name] = dtypes_map[st.session_state.temp_datasets[st.session_state.selected_dataset].schema[column_to_cast].dataType] if column_to_cast else 'string'
                         cast_type = st.selectbox(
                             "Type",
                             options=list(dtypes_map.values()),
@@ -144,5 +156,5 @@ with col2:
                         st.session_state.rules[rule][selected_dataset][i]['column_map'] = {}
                 st.write("---")
             
-with d:
-    st.write(st.session_state.rules)
+# with d:
+#     st.write(st.session_state.rules)
