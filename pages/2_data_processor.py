@@ -1,5 +1,6 @@
 import streamlit as st
 from pyspark.sql import types
+from pyspark.sql.functions import to_date, col
 import random
 
 d, col1, col2 = st.columns(3)
@@ -16,7 +17,10 @@ def test_rule(rule):
                 for column, cast_type in column_map.items():
                     if cast_type:
                         try:
-                            st.session_state.datasets[dataset_name] = st.session_state.datasets[dataset_name].withColumn(column, st.session_state.datasets[dataset_name][column].cast(reverse_dtypes_map[cast_type]))
+                            if cast_type == 'date':
+                                st.session_state.datasets[dataset_name] = st.session_state.datasets[dataset_name].withColumn(column, to_date(col(column), 'MM-dd-yy'))
+                            else:
+                                st.session_state.datasets[dataset_name] = st.session_state.datasets[dataset_name].withColumn(column, st.session_state.datasets[dataset_name][column].cast(reverse_dtypes_map[cast_type]))
                             view_name = st.session_state.views[dataset_name]["view_name"]
                             st.session_state.datasets[dataset_name].createOrReplaceTempView(view_name)
                         except Exception as e:
