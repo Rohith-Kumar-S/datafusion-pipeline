@@ -31,11 +31,16 @@ if "views_query" not in st.session_state:
 if "spark" not in st.session_state:
     st.session_state.spark = None
     
+if "temp_rules" not in st.session_state:
+    st.session_state.temp_rules = {}
+
 if "rules" not in st.session_state:
     st.session_state.rules = {}
 
 if "total_rules" not in st.session_state:
     st.session_state.total_rules = 0
+    
+
     
 if "cast" not in st.session_state:
     st.session_state.cast = {}
