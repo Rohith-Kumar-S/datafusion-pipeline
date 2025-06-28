@@ -15,7 +15,7 @@ def reset_views(dataset_name):
     time.sleep(.3)
 
 
-col1, col2 = st.columns(2)
+
 
 dtypes_map = { types.IntegerType(): 'int', types.StringType(): 'string', types.DoubleType(): 'double', types.FloatType(): 'float', types.BooleanType(): 'bool', types.TimestampType(): 'timestamp', types.DateType(): 'date', types.LongType(): 'long', types.ShortType(): 'short', types.ByteType(): 'byte' }
 reverse_dtypes_map = {v: k for k, v in dtypes_map.items()}
@@ -40,14 +40,14 @@ def test_rule(rules, rule):
     st.toast('Rule applied successfully!', icon="✅")
     time.sleep(.3)
     
-
-with col1:
-    selected_dataset = st.selectbox("Select Dataset",
-        options=list(st.session_state.temp_datasets.keys()),
-        key="selected_dataset",
-        help="Select a dataset to process."
-    )
-    if list(st.session_state.temp_datasets):
+if list(st.session_state.temp_datasets):
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_dataset = st.selectbox("Select Dataset",
+            options=list(st.session_state.temp_datasets.keys()),
+            key="selected_dataset",
+            help="Select a dataset to process."
+        )
         options = ["View", "Describe", "Schema", "Visualize"]
         selection = st.segmented_control(
             "Operations", options, selection_mode="single", default="View", key="selection"
@@ -85,9 +85,8 @@ with col1:
                     st.dataframe(df.toPandas(), height=350)
                 else:
                     st.dataframe(df.toPandas())
-            
-with col2:
-    if list(st.session_state.temp_datasets):
+                
+    with col2:
         rules = None
         view_name = st.session_state.views[st.session_state.selected_dataset]["view_name"]
         selected_dataset = st.session_state.selected_dataset
@@ -113,6 +112,10 @@ with col2:
                         st.session_state.rules[new_rule_name] = temp
                         st.toast('Rule created successfully!', icon="✅")
                         time.sleep(.2)
+                else:
+                    st.toast('Rule name can\'t be empty.', icon="❌")
+                    time.sleep(.2)
+                
         with col1:
             if rule_selection != 'Create rule':
                 st.selectbox("Select Rule", options=list(st.session_state.rules.keys()), index=0, key="selected_rule", disabled=rule_selection == 'Create rule', label_visibility = "collapsed", help="Select a rule to load.", on_change=lambda: st.session_state.temp_rules.update(st.session_state.rules[st.session_state.selected_rule]) if st.session_state.selected_rule in st.session_state.rules else None)
@@ -185,6 +188,11 @@ with col2:
                     if 'column_map' not in rules[rule][selected_dataset][i]:
                         rules[rule][selected_dataset][i]['column_map'] = {}
                 st.write("---")
+else:
+    st.warning('No data found to process', icon="⚠️")
+                
+
+    
             
 # with d:
 #     st.write(st.session_state.temp_rules)
