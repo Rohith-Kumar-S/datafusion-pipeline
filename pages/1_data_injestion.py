@@ -10,6 +10,10 @@ import os
 import random
 import string
 
+from pipeline_utils import PipelineUtils
+
+pipeline_utils = PipelineUtils(st.session_state.spark, st.session_state.datasets, st.session_state.dataset_paths, st.session_state.views, st.session_state.temp_datasets, st.session_state.user_input)
+
 options = ["Link", "Upload"]
 selection = st.segmented_control(
     "Data Source", options, selection_mode="single"
@@ -28,7 +32,7 @@ def find_files(directory, extensions=['.csv', '.json', '.xlsx']):
     for root, dirs, filenames in os.walk(directory):
         for filename in filenames:
             if any(filename.endswith(ext) for ext in extensions):
-                add_dataset(filename, os.path.join(root, filename))
+                pipeline_utils.add_dataset(filename, os.path.join(root, filename))
                 files.append(os.path.join(root, filename))
     return files
 
