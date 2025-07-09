@@ -1,4 +1,4 @@
-FROM bitnami/spark:latest
+FROM easewithdata/pyspark-jupyter-lab
 
 # Switch to root for installations
 USER root

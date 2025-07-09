@@ -69,10 +69,13 @@ if list(st.session_state.temp_datasets):
                 if query:
                     df = st.session_state.spark.sql(query)
                     rows = df.count()
+                    print(f"Rows in the dataset: {rows}", flush=True)
                     if rows > 10:
                         st.dataframe(df.limit(rows if rows < 60 else 60).toPandas(), height=350)
                     else:
-                        st.dataframe(df.limit(rows).toPandas())
+                        print("Displaying all rows:", flush=True)
+                        dataframe = df.limit(rows).toPandas()
+                        st.dataframe(dataframe)
                     st.session_state.views_query = query
                 else:
                     st.dataframe(st.session_state.temp_datasets[selected_dataset].limit(10).toPandas())

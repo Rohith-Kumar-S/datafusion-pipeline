@@ -8,7 +8,7 @@ import string
 import streamlit as st
 import time
 from pyspark.sql import types
-from pyspark.sql.functions import to_date, col
+import pyspark.sql.functions as F
 
 import os
 
@@ -95,10 +95,19 @@ class PipelineUtils:
     def random_table_name(self, prefix='table_', length=8):
         suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
         return prefix + suffix
+    
+    def update_data_state_variables(self, dataset_name, data, from_ui=True):
+        view_name = "_".join(dataset_name.split('.')[0].lower().split(' ')).replace("-", "_").replace(".", "_")
+        view_name = "view_" + view_name
+        self.views_state[dataset_name] = {"view_name": view_name }
+        self.datasets_state[dataset_name] = data
+        self.temp_datasets_state[dataset_name] = self.datasets_state[dataset_name]
+        if from_ui:
+            self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
 
-    def import_data(self, links, from_ui=True):
-        if not links == "": 
-            urls = re.findall(r'https?://[^\s]+|http?://[^\s]+', links)
+    def import_data(self, value, import_type, from_ui=True):
+        if import_type == "link": 
+            urls = re.findall(r'https?://[^\s]+|http?://[^\s]+', value)
             for url in urls:
                 if url == "":
                     continue
@@ -108,14 +117,36 @@ class PipelineUtils:
                     print(f"Dataset {dataset_name} could not be imported.")
                 else:
                     print(f"Importing dataset: {dataset_name} from {dataset_path}")
-                    view_name = "_".join(dataset_name.split('.')[0].lower().split(' ')).replace("-", "_").replace(".", "_")
-                    view_name = "view_" + view_name
-                    self.views_state[dataset_name] = {"view_name": view_name }
-                    self.datasets_state[dataset_name] = self.spark_session_state.read.csv(dataset_path, header=True, inferSchema=True, nullValue='NA')
-                    self.temp_datasets_state[dataset_name] = self.datasets_state[dataset_name]
-                    if from_ui:
-                        self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
-            self.user_input = links
+                    data = None
+                    if dataset_path.endswith('.csv'):
+                        data = self.spark_session_state.read.csv(dataset_path, header=True, inferSchema=True, nullValue='NA')
+                    self.update_data_state_variables(dataset_name, data, from_ui=True)
+        elif import_type == "stream":
+            if value['stream_format'] == 'kafka':
+                try:
+                    kafka_df = (
+                        st.session_state.spark
+                        .read
+                        .format('kafka')
+                        .option('kafka.bootstrap.servers', value['bootstrap_server'])
+                        .option('subscribe', value['topic'])
+                        .option('startingOffsets', 'earliest')
+                        .load()
+                    )
+                    print('Stream data imported successfully', flush=True)
+                    kafka_df = kafka_df.withColumn('value', F.expr('cast(value as string)'))
+                    kafka_df = kafka_df.filter(kafka_df.value.like("{%"))
+                    json_sample = kafka_df.select('value').head()[0]  # Get the first row's value
+                    schema = F.schema_of_json(json_sample)
+                    kafka_df = kafka_df.withColumn("parsed_json", F.from_json(F.col("value"), schema)).selectExpr('parsed_json.*')
+                    kafka_df = kafka_df.select([F.col(c).cast('string').alias(c) for c in kafka_df.columns])
+                    self.update_data_state_variables(value['dataset_name'], kafka_df, from_ui=True)
+                except Exception as e:
+                    print(f"Error importing stream data: {e}", flush=True)
+                    st.error(f"Error importing stream data")
+                    return False
+        return True
+        
             
     
 
@@ -129,9 +160,9 @@ class PipelineUtils:
                         if cast_type:
                             try:
                                 if cast_type == 'date':
-                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, to_date(col(column), 'MM-dd-yy'))
+                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, F.to_date(F.col(column), 'MM-dd-yy'))
                                 else:
-                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, self.temp_datasets_state[dataset_name][column].cast(reverse_dtypes_map[cast_type]))
+                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, self.temp_datasets_state[dataset_name][column].cast(self.reverse_dtypes_map[cast_type]))
                                 if from_ui:
                                     view_name = self.views_state[dataset_name]["view_name"]
                                     self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)

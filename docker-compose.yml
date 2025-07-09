@@ -4,13 +4,29 @@ services:
   datafusion-app:
     build:
       context: ./datafusion
-    image: myapp/datafusion-app:latest
+    image: phantom/datafusion:latest
     container_name: datafusion-app
     ports:
       - "8501:8501"
       - "4040:4040"
     environment:
       SPARK_UI_PORT: 4040
+    volumes:
+      - ./datafusion:/app
+    depends_on:
+      - rk-kafka
+  
+  rk-pyspark-jupyter:
+    image: easewithdata/pyspark-jupyter-lab
+    user: root
+    container_name: rk-pyspark-jupyter-lab
+    ports:
+      - "8889:8889"
+      - "4041:4041"
+    environment:
+      JUPYTER_PORT: 8889
+      SPARK_UI_PORT: 4041
+      GRANT_SUDO: yes
     volumes:
       - ./datafusion:/app
     depends_on:

@@ -82,12 +82,23 @@ if "total_pipelines" not in st.session_state:
     
 if "fusion_dataset_names" not in st.session_state:
     st.session_state.fusion_dataset_names = []
+    
+if "stream_data" not in st.session_state:
+    st.session_state.stream_data = {}
 
     
 # # Initialize Spark
 @st.cache_resource
 def Spark_Data_Fusion():    
-    return SparkSession.builder.appName("DataFusion").getOrCreate()
+    return (
+        SparkSession
+        .builder
+        .config('spark.streaming.stopGracefullyOnShutdown', True)
+        .config('spark.jars.packages', 'org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0')
+        .config('spark.sql.shuffle.partitions', 4)
+        .appName("DataFusion")
+        .getOrCreate()
+        )
 
 
 st.session_state.spark = Spark_Data_Fusion()
