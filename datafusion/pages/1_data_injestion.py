@@ -61,25 +61,25 @@ with main:
                     # if len(st.session_state.datasets) < 9:
                     #     dataset.show(1)
 
-    elif "Stream" in selection:
-        stream_ = st.text_input("Bootstrap server", key="bootstrap_server", value='rk-kafka:29093', placeholder="rk-kafka:29093")
-        st.text_input("Subscribe topic", key="stream_topic", value='iot-device-data', placeholder="iot-device-data")
-        st.text_input("Imported data name", key="stream_data_name", value='iot_device_data', placeholder="iot_device_data.csv")
-        if st.button("Import & Save",disabled=input_selection != 'Create input source'):
+    # elif "Stream" in selection:
+    #     stream_ = st.text_input("Bootstrap server", key="bootstrap_server", value='rk-kafka:29093', placeholder="rk-kafka:29093")
+    #     st.text_input("Subscribe topic", key="stream_topic", value='iot-device-data', placeholder="iot-device-data")
+    #     st.text_input("Imported data name", key="stream_data_name", value='iot_device_data', placeholder="iot_device_data.csv")
+    #     if st.button("Import & Save",disabled=input_selection != 'Create input source'):
             
-            try:
-                print('Importing stream data...', flush=True)
-                value = {}
-                value['stream_format'] = 'kafka'
-                value['bootstrap_server'] = st.session_state.bootstrap_server
-                value['topic'] = st.session_state.stream_topic
-                value['dataset_name'] = st.session_state.stream_data_name
-                if pipeline_utils.import_data(value, 'stream', from_ui=True):
-                    st.session_state.stream_data = value
-                    st.toast(f"Stream data '{st.session_state.stream_data_name}' imported successfully!", icon="✅")
+    #         try:
+    #             print('Importing stream data...', flush=True)
+    #             value = {}
+    #             value['stream_format'] = 'kafka'
+    #             value['bootstrap_server'] = st.session_state.bootstrap_server
+    #             value['topic'] = st.session_state.stream_topic
+    #             value['dataset_name'] = st.session_state.stream_data_name
+    #             if pipeline_utils.import_data(value, 'stream', from_ui=True):
+    #                 st.session_state.stream_data = value
+    #                 st.toast(f"Stream data '{st.session_state.stream_data_name}' imported successfully!", icon="✅")
                 
-            except Exception as e:
-                print(e, flush=True)
+    #         except Exception as e:
+    #             print(e, flush=True)
                 
 
     else:
@@ -89,6 +89,25 @@ with main:
         for uploaded_file in uploaded_files:
             bytes_data = uploaded_file.read()
             df = pd.read_csv(StringIO(bytes_data.decode('utf-8')))
+            
+    stream_ = st.text_input("Bootstrap server", key="bootstrap_server", value='rk-kafka:29093', placeholder="rk-kafka:29093")
+    st.text_input("Subscribe topic", key="stream_topic", value='iot-device-data', placeholder="iot-device-data")
+    st.text_input("Imported data name", key="stream_data_name", value='iot_device_data', placeholder="iot_device_data.csv")
+    # if st.button("Import & Save",disabled=input_selection != 'Create input source'):
+        
+    try:
+        print('Importing stream data...', flush=True)
+        value = {}
+        value['stream_format'] = 'kafka'
+        value['bootstrap_server'] = st.session_state.bootstrap_server
+        value['topic'] = st.session_state.stream_topic
+        value['dataset_name'] = st.session_state.stream_data_name
+        if pipeline_utils.import_data(value, 'stream', from_ui=True):
+            st.session_state.stream_data = value
+            st.toast(f"Stream data '{st.session_state.stream_data_name}' imported successfully!", icon="✅")
+        
+    except Exception as e:
+        print(e, flush=True)
             
 with sidebar:
     st.write(st.session_state.temp_datasets)

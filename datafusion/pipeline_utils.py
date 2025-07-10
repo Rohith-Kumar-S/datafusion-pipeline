@@ -103,6 +103,7 @@ class PipelineUtils:
         self.datasets_state[dataset_name] = data
         self.temp_datasets_state[dataset_name] = self.datasets_state[dataset_name]
         if from_ui:
+            self.temp_datasets_state[dataset_name].cache()
             self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
 
     def import_data(self, value, import_type, from_ui=True):
@@ -139,7 +140,6 @@ class PipelineUtils:
                     json_sample = kafka_df.select('value').head()[0]  # Get the first row's value
                     schema = F.schema_of_json(json_sample)
                     kafka_df = kafka_df.withColumn("parsed_json", F.from_json(F.col("value"), schema)).selectExpr('parsed_json.*')
-                    kafka_df = kafka_df.select([F.col(c).cast('string').alias(c) for c in kafka_df.columns])
                     self.update_data_state_variables(value['dataset_name'], kafka_df, from_ui=True)
                 except Exception as e:
                     print(f"Error importing stream data: {e}", flush=True)
@@ -154,8 +154,8 @@ class PipelineUtils:
     def test_rule(self, rule, from_ui=True):
         for dataset_name, processes in rule.items():
             for process in processes:
+                column_map = process.get('column_map', {})
                 if process['operation'] == 'Cast':
-                    column_map = process.get('column_map', {})
                     for column, cast_type in column_map.items():
                         if cast_type:
                             try:
@@ -172,6 +172,20 @@ class PipelineUtils:
                                 if from_ui:
                                     st.error(f"Error casting column {column} to {cast_type}: {e}")
                                     time.sleep(.3)
+                elif process['operation'] == 'Explode':
+                    column_name = column_map.get('new_column_name', '')
+                    data_source = column_map.get('column_data_source', '')
+                    print(f"Exploding column {column_name} from data source {data_source}", flush=True)
+                    try:
+                        df = st.session_state.temp_datasets[dataset_name]
+                        df = df.withColumn(column_name, F.explode(data_source))
+                        st.session_state.temp_datasets[dataset_name] = df
+                        view_name = st.session_state.views[dataset_name]["view_name"]
+                        st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
+                        st.toast('Rule applied successfully!', icon="✅")
+                        time.sleep(.3)
+                    except Exception as e:
+                        st.error(f"Error exploding column {column_name}: {e}")
                                     
     def get_fusable_columns(self, datasets):
         dataset = datasets[0]
