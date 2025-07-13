@@ -28,7 +28,7 @@ class Pipeline:
         """Execute the pipeline by running each layer in sequence."""
         self.pipeline = pipeline
         self.run_pipeline(statusbar)
-        return self.exported_paths
+        return self.exported_paths, self.stream_query
 
     def get_pipeline(self):
         return self.pipeline
@@ -41,6 +41,7 @@ class Pipeline:
         """Run the pipeline by executing each layer in sequence."""
         pipeline = self.pipeline
         pipeline_utils = self.pipeline_utils
+        user_interupt = False
 
         if not pipeline:
             raise ValueError("Pipeline is empty. Please add layers to the pipeline.")
@@ -53,8 +54,12 @@ class Pipeline:
         for i, layer in enumerate(pipeline):
             if layer["layer_type"] == "Source":
                 print(f"Executing Source layer")
-                if layer["layer_selection"]["source_type"] == "Link":
-                    pipeline_utils.import_data(layer["layer_selection"]["source_links"], from_ui=False)
+                if layer["layer_selection"]["Link"]:
+                    pipeline_utils.import_data(layer["layer_selection"]["Link"]["source_links"], "Link", from_ui=False)
+                if layer["layer_selection"]["Stream"]:
+                    pipeline_utils.import_data(layer["layer_selection"]["Stream"], "Stream", from_ui=False)
+                if layer["layer_selection"]["Upload"]:
+                    pass
                 print(f"Source layer executed successfully with datasets")
             elif layer["layer_type"] == "Processor":
                 print(f"Executing Processor layer")
@@ -65,10 +70,14 @@ class Pipeline:
                 pipeline_utils.fuse_datasets(layer["layer_selection"][0]["fused_dataset_name"],
                                     layer["layer_selection"][0]["datasets_to_fuse"],
                                     layer["layer_selection"][0]["fuse_by"],
-                                    layer["layer_selection"][0]["fusable_columns"])
+                                    layer["layer_selection"][0]["fuse_how"])
                 print(f"Fusion layer executed successfully with datasets")
             elif layer["layer_type"] == "Target":
                 print(f"Executing Target layer")
-                self.exported_paths = pipeline_utils.export_datasets(layer["layer_selection"])
+                self.exported_paths, user_interupt = pipeline_utils.export_datasets(layer["layer_selection"])
                 print(f"Target layer executed successfully with datasets exported to {self.exported_paths}")
-            statusbar.progress(int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline)))), text=f'Layer {layer["layer_type"]} executed successfully.')
+                if user_interupt:
+                    statusbar.progress(0, text="Pipeline execution interrupted by user.")
+                    break
+            if not user_interupt:
+                statusbar.progress(int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline)))), text=f'Layer {layer["layer_type"]} executed successfully.')

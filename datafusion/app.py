@@ -80,11 +80,17 @@ if "pipelines" not in st.session_state:
 if "total_pipelines" not in st.session_state:
     st.session_state.total_pipelines = 0
     
+if "imported_data" not in st.session_state:
+    st.session_state.imported_data = []
+    
 if "fusion_dataset_names" not in st.session_state:
     st.session_state.fusion_dataset_names = []
     
 if "stream_data" not in st.session_state:
     st.session_state.stream_data = {}
+
+if "part_of_stream" not in st.session_state:
+    st.session_state.part_of_stream = []
 
     
 # # Initialize Spark
