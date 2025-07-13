@@ -147,45 +147,76 @@ class PipelineUtils:
                     return False
         return True
         
-            
-    
+    def reset_views(self, dataset_name):
+        st.session_state.temp_datasets[dataset_name] = st.session_state.datasets[dataset_name]
+        st.session_state.temp_datasets[dataset_name].cache()
+        view_name = st.session_state.views[dataset_name]["view_name"]
+        st.session_state.cast = {}
+        st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
+        st.toast('Data reseted successfully!', icon="✅")
+        time.sleep(.3)
 
-        
     def test_rule(self, rule, from_ui=True):
         for dataset_name, processes in rule.items():
+            self.reset_views(dataset_name)
             for process in processes:
                 column_map = process.get('column_map', {})
-                if process['operation'] == 'Cast':
-                    for column, cast_type in column_map.items():
-                        if cast_type:
-                            try:
-                                if cast_type == 'date':
-                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, F.to_date(F.col(column), 'MM-dd-yy'))
-                                else:
-                                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, self.temp_datasets_state[dataset_name][column].cast(self.reverse_dtypes_map[cast_type]))
-                                if from_ui:
-                                    view_name = self.views_state[dataset_name]["view_name"]
-                                    self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
-                                    st.toast('Rule applied successfully!', icon="✅")
-                                    time.sleep(.3)
-                            except Exception as e:
-                                if from_ui:
-                                    st.error(f"Error casting column {column} to {cast_type}: {e}")
-                                    time.sleep(.3)
-                elif process['operation'] == 'Explode':
-                    column_name = column_map.get('new_column_name', '')
-                    data_source = column_map.get('column_data_source', '')
-                    print(f"Exploding column {column_name} from data source {data_source}", flush=True)
-                    try:
-                        df = st.session_state.temp_datasets[dataset_name]
-                        df = df.withColumn(column_name, F.explode(data_source))
-                        st.session_state.temp_datasets[dataset_name] = df
+                match process['operation']:
+                    case 'Cast':
+                        for column, cast_type in column_map.items():
+                            if cast_type:
+                                try:
+                                    if cast_type == 'date':
+                                        self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, F.to_date(F.col(column), 'MM-dd-yy'))
+                                    else:
+                                        self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(column, self.temp_datasets_state[dataset_name][column].cast(self.reverse_dtypes_map[cast_type]))
+                                    if from_ui:
+                                        view_name = self.views_state[dataset_name]["view_name"]
+                                        self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
+                                        st.toast('Rule applied successfully!', icon="✅")
+                                        time.sleep(.3)
+                                except Exception as e:
+                                    if from_ui:
+                                        st.error(f"Error casting column {column} to {cast_type}: {e}")
+                                        time.sleep(.3)
+                    case 'Delete':
+                        drop_by = column_map.get('drop_by', '')
+                        data_reference = column_map.get('data_reference', '')
+                        if drop_by == 'column':
+                            st.session_state.temp_datasets[dataset_name] = st.session_state.temp_datasets[dataset_name].drop(data_reference)
                         view_name = st.session_state.views[dataset_name]["view_name"]
                         st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
                         st.toast('Rule applied successfully!', icon="✅")
                         time.sleep(.3)
-                    except Exception as e:
-                        st.error(f"Error exploding column {column_name}: {e}")
+                    case 'Explode':
+                        column_name = column_map.get('new_column_name', '')
+                        data_source = column_map.get('data_reference', '')
+                        print(f"Exploding column {column_name} from data source {data_source}", flush=True)
+                        try:
+                            df = st.session_state.temp_datasets[dataset_name]
+                            df = df.withColumn(column_name, F.explode(data_source))
+                            st.session_state.temp_datasets[dataset_name] = df
+                            view_name = st.session_state.views[dataset_name]["view_name"]
+                            st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
+                            st.toast('Rule applied successfully!', icon="✅")
+                            time.sleep(.3)
+                        except Exception as e:
+                            st.error(f"Error exploding column {column_name}: {e}")
+                    case 'Flatten':
+                        column_name = column_map.get('new_column_name', '')
+                        data_source = column_map.get('data_reference', '')
+                        print(f"Flattening column {column_name} from data source {data_source}", flush=True)
+                        try:
+                            df = st.session_state.temp_datasets[dataset_name]
+                            df = df.withColumn(column_name, F.col(data_source))
+                            st.session_state.temp_datasets[dataset_name] = df
+                            view_name = st.session_state.views[dataset_name]["view_name"]
+                            st.session_state.temp_datasets[dataset_name].createOrReplaceTempView(view_name)
+                            st.toast('Rule applied successfully!', icon="✅")
+                            time.sleep(.3)
+                        except Exception as e:
+                            st.error(f"Error flattening column {column_name}: {e}")
+                        
                                     
     def get_fusable_columns(self, datasets):
         dataset = datasets[0]
