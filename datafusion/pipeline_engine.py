@@ -28,7 +28,7 @@ class Pipeline:
         """Execute the pipeline by running each layer in sequence."""
         self.pipeline = pipeline
         self.run_pipeline(statusbar)
-        return self.exported_paths, self.stream_query
+        return self.exported_paths
 
     def get_pipeline(self):
         return self.pipeline

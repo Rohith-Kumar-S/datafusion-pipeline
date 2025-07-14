@@ -7,7 +7,6 @@ st.set_page_config(
     page_icon=":bar_chart:",
     layout="wide",
     initial_sidebar_state="expanded",
-    
 )
 
 # Initialize the session state key if it doesn't exist
@@ -17,14 +16,14 @@ if "datasets" not in st.session_state:
     st.session_state.datasets = {}
     st.session_state.dataset_paths = {}
 
-if 'temp_datasets' not in st.session_state:
+if "temp_datasets" not in st.session_state:
     st.session_state.temp_datasets = {}
-    
+
 if "views" not in st.session_state:
     st.session_state.views = {}
 
 if "views_query" not in st.session_state:
-    st.session_state.views_query = ''
+    st.session_state.views_query = ""
 
 if "spark" not in st.session_state:
     st.session_state.spark = None
@@ -46,7 +45,7 @@ if "rules" not in st.session_state:
 
 if "total_rules" not in st.session_state:
     st.session_state.total_rules = 0
-    
+
 if "temp_fusions" not in st.session_state:
     st.session_state.temp_fusions = {}
 
@@ -58,53 +57,56 @@ if "total_fusions" not in st.session_state:
 
 if "cast" not in st.session_state:
     st.session_state.cast = {}
-    
+
 if "temp_targets" not in st.session_state:
     st.session_state.temp_targets = {}
 
 if "targets" not in st.session_state:
     st.session_state.targets = {}
-    
+
 if "total_targets" not in st.session_state:
     st.session_state.total_targets = 0
-    
+
 if "temp_pipelines" not in st.session_state:
     st.session_state.temp_pipelines = {}
-    
+
 if "pipeline_layer_selections" not in st.session_state:
     st.session_state.pipeline_layer_selections = {}
 
 if "pipelines" not in st.session_state:
     st.session_state.pipelines = {}
-    
+
 if "total_pipelines" not in st.session_state:
     st.session_state.total_pipelines = 0
-    
+
 if "imported_data" not in st.session_state:
     st.session_state.imported_data = []
-    
+
 if "fusion_dataset_names" not in st.session_state:
     st.session_state.fusion_dataset_names = []
-    
+
 if "stream_data" not in st.session_state:
     st.session_state.stream_data = {}
 
 if "part_of_stream" not in st.session_state:
     st.session_state.part_of_stream = []
 
-    
+
 # # Initialize Spark
 @st.cache_resource
-def Spark_Data_Fusion():    
+def Spark_Data_Fusion():
+    jar_path = os.path.join("dependencies", "jars", "postgresql-42.7.7.jar")
+
     return (
-        SparkSession
-        .builder
-        .config('spark.streaming.stopGracefullyOnShutdown', True)
-        .config('spark.jars.packages', 'org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0')
-        .config('spark.sql.shuffle.partitions', 4)
+        SparkSession.builder.config("spark.streaming.stopGracefullyOnShutdown", True)
+        .config(
+            "spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0"
+        )
+        .config("spark.jars", jar_path)
+        .config("spark.sql.shuffle.partitions", 8)
         .appName("DataFusion")
         .getOrCreate()
-        )
+    )
 
 
 st.session_state.spark = Spark_Data_Fusion()
@@ -112,15 +114,16 @@ st.session_state.spark = Spark_Data_Fusion()
 st.title("Data Fusion Pipeline")
 pages = {
     "": [
-        st.Page(os.path.join('pages', "1_data_injestion.py"), title="Injest Data"),
-        st.Page(os.path.join('pages', "2_data_processor.py"), title="Process Data"),
-        st.Page(os.path.join('pages', "3_data_unifier.py"), title="Fuse Data"),
-        st.Page(os.path.join('pages', "4_data_sinker.py"), title="Data Target"),
-        st.Page(os.path.join('pages', "5_pipeline_builder.py"), title="Build Pipeline"),
-        st.Page(os.path.join('pages', "6_pipeline_executor.py"), title="Execute Pipeline"),
+        st.Page(os.path.join("pages", "1_data_injestion.py"), title="Injest Data"),
+        st.Page(os.path.join("pages", "2_data_processor.py"), title="Process Data"),
+        st.Page(os.path.join("pages", "3_data_unifier.py"), title="Fuse Data"),
+        st.Page(os.path.join("pages", "4_data_sinker.py"), title="Data Target"),
+        st.Page(os.path.join("pages", "5_pipeline_builder.py"), title="Build Pipeline"),
+        st.Page(
+            os.path.join("pages", "6_pipeline_executor.py"), title="Execute Pipeline"
+        ),
     ]
 }
 
 pg = st.navigation(pages)
 pg.run()
-

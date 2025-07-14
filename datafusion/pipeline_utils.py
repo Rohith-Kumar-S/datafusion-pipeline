@@ -382,6 +382,46 @@ class PipelineUtils:
                     query.stop()
                     user_interupt = True
                     st.warning("Streaming was stopped by the user.")
+        elif export_data["type"] == "jdbc":
+            for dataset in datasets:
+                is_part_of_stream = dataset in export_data["part_of_stream"]
+
+                def device_data_output(df, batch_id):
+                    print("Batch id :", str(batch_id))
+
+                    (
+                        df.write.mode("append")
+                        .format("jdbc")
+                        .option("driver", "org.postgresql.Driver")
+                        .option("url", export_data["jdbc_url"])
+                        .option("dbtable", export_data["jdbc_table_name"])
+                        .option("user", export_data["jdbc_username"])
+                        .option("password", export_data["jdbc_password"])
+                        .save()
+                    )
+
+                    print(df.show())
+
+                if is_part_of_stream:
+                    print("Streaming data to JDBC#########################", flush=True)
+                    query = (
+                        self.temp_datasets_state[dataset]
+                        .writeStream.foreachBatch(device_data_output)
+                        .trigger(processingTime="10 seconds")
+                        .option(
+                            "checkpointLocation",
+                            os.path.join("checkpoint_dir", dataset),
+                        )
+                        .start()
+                    )
+                    try:
+                        query.awaitTermination()
+                    except KeyboardInterrupt:
+                        query.stop()
+                        user_interupt = True
+                        st.warning("Streaming was stopped by the user.")
+                else:
+                    device_data_output(self.temp_datasets_state[dataset], 0)
         return paths, user_interupt
 
     def test_spark(self):
