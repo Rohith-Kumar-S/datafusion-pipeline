@@ -42,6 +42,7 @@ dtypes_map = {
 }
 reverse_dtypes_map = {v: k for k, v in dtypes_map.items()}
 
+
 def update_delete_type(rule, selected_dataset, index, drop_by=None):
     if drop_by == "--Select a delete type--":
         return
@@ -82,7 +83,7 @@ def update_column_name(rule, selected_dataset, index, new_column_name=None):
         ] = new_column_name
 
 
-def update_data_source(rule, selected_dataset, index, data_reference=None):
+def update_data_source(rule, selected_dataset, index, data_reference=None, process=""):
     if (
         "data_reference"
         not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
@@ -105,15 +106,65 @@ def update_new_dataset_name(rule, selected_dataset, index, new_dataset_name=None
     st.session_state.temp_rules[rule][selected_dataset][index].get(
         "data_map", {}
     ).update({"save_as": new_dataset_name})
-    if new_dataset_name not in st.session_state.fusion_dataset_names and new_dataset_name != '':
+    if (
+        new_dataset_name not in st.session_state.fusion_dataset_names
+        and new_dataset_name != ""
+    ):
         st.session_state.fusion_dataset_names.append(new_dataset_name)
         if selected_dataset in st.session_state.part_of_stream:
             st.session_state.part_of_stream.append(new_dataset_name)
 
+
+def update_column_to_cast(rule, selected_dataset, index, column_to_cast=None):
+    if column_to_cast == "--Select a column--":
+        return
+    if (
+        "column_to_cast"
+        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
+    ):
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "column_to_cast"
+        ] = column_to_cast
+    elif (
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "column_to_cast"
+        ]
+        != column_to_cast
+    ):
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "column_to_cast"
+        ] = column_to_cast
+
+def update_cast_type(rule, selected_dataset, index, cast_type=None, process=""):
+    if cast_type == "--Select a cast type--":
+        return
+    if (
+        "cast_type"
+        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
+    ):
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "cast_type"
+        ] = cast_type
+    elif (
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "cast_type"
+        ]
+        != cast_type
+    ):
+        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+            "cast_type"
+        ] = cast_type
+
+
 # d, b = st.columns([2, 8], vertical_alignment="bottom")
 
 # with b:
-if list(st.session_state.temp_datasets):
+if not list(st.session_state.temp_datasets):
+    st.warning("No data found to process", icon="⚠️")
+    st.session_state.temp_datasets = {}
+    st.session_state.datasets = {}
+    st.session_state.views = {}
+else:
     col1, col2 = st.columns(2)
     with col1:
         selected_dataset = st.selectbox(
@@ -149,7 +200,6 @@ if list(st.session_state.temp_datasets):
                 if query:
                     df = st.session_state.spark.sql(query)
                     rows = df.count()
-                    print(f"Rows in the dataset: {rows}", flush=True)
                     if rows > 10:
                         st.dataframe(
                             df.limit(rows if rows < 60 else 60).toPandas(),
@@ -182,13 +232,9 @@ if list(st.session_state.temp_datasets):
                     .toPandas()
                 )
             case "Schema":
-                st.write(
-                    f'**{st.session_state.views[selected_dataset]["view_name"]}**'
-                )
+                st.write(f'**{st.session_state.views[selected_dataset]["view_name"]}**')
                 data = []
-                for field in st.session_state.temp_datasets[
-                    selected_dataset
-                ].schema:
+                for field in st.session_state.temp_datasets[selected_dataset].schema:
                     data.append(
                         (field.name, dtypes_map[field.dataType], field.nullable)
                     )
@@ -227,9 +273,9 @@ if list(st.session_state.temp_datasets):
                     "data_map"
                 ]
             ):
-                st.session_state.temp_rules[rule][selected_dataset][index][
-                    "data_map"
-                ][column_to_cast] = ""
+                st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+                    column_to_cast
+                ] = ""
             st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
                 column_to_cast
             ] = st.session_state.cast[f"cast_type_{column_to_cast}_{index}"]
@@ -244,7 +290,6 @@ if list(st.session_state.temp_datasets):
                     new_rule_name = st.session_state[f"{rule}"]
                     if new_rule_name not in st.session_state.rules:
                         del st.session_state.temp_rules[rule]
-                        st.session_state.cast = {}
                         st.session_state.rules[new_rule_name] = temp
                         st.toast("Rule created successfully!", icon="✅")
                         time.sleep(0.2)
@@ -270,7 +315,7 @@ if list(st.session_state.temp_datasets):
                         else None
                     ),
                 )
-                rule = list(st.session_state.rules.keys())[0]
+                rule = st.session_state.selected_rule
                 rules = st.session_state.rules
             else:
                 if rule not in st.session_state.temp_rules:
@@ -298,27 +343,33 @@ if list(st.session_state.temp_datasets):
                 time.sleep(0.3)
 
         with st.container(height=462):
-            dataset_columns = st.session_state.temp_datasets[
-                st.session_state.selected_dataset
-            ].columns
+            dataset_columns = ["--Select a column--"]
+            dataset_columns.extend(
+                st.session_state.temp_datasets[
+                    st.session_state.selected_dataset
+                ].columns
+            )
             for i, process in enumerate(
                 rules[rule][selected_dataset]
                 if rule in rules and selected_dataset in rules[rule]
                 else []
             ):
                 col1, col3 = st.columns([2, 1], vertical_alignment="bottom")
+                options = [
+                    "Cast",
+                    "Filter",
+                    "Delete",
+                    "Explode",
+                    "Flatten",
+                    "Save",
+                    "",
+                ]
                 operation_type = col1.selectbox(
                     "Operation",
-                    options=[
-                        "Cast",
-                        "Filter",
-                        "Delete",
-                        "Explode",
-                        "Flatten",
-                        "Save",
-                        "",
-                    ],
-                    index=0,
+                    options=options,
+                    index=options.index(
+                        rules[rule][selected_dataset][i].get("operation", "Cast")
+                    ),
                     key=f"operation_type_{i}",
                     disabled=rule_selection == "Load rule",
                     help="Select an operation to perform on the dataset.",
@@ -331,60 +382,63 @@ if list(st.session_state.temp_datasets):
                         key=f"delete_process_{i}",
                         use_container_width=True,
                         disabled=rule_selection == "Load rule",
-                        on_click=lambda p=process: rules[rule][
-                            selected_dataset
-                        ].remove(p),
+                        on_click=lambda p=process: rules[rule][selected_dataset].remove(
+                            p
+                        ),
                     )
+                if "data_map" not in rules[rule][selected_dataset][i]:
+                    rules[rule][selected_dataset][i]["data_map"] = {}
                 match operation_type:
                     case "Cast":
-                        rules[rule][selected_dataset][i]["operation"] = "Cast"
-                        if "data_map" not in rules[rule][selected_dataset][i]:
-                            rules[rule][selected_dataset][i]["data_map"] = {}
+                        if "operation" not in rules[rule][selected_dataset][i]:
+                            rules[rule][selected_dataset][i]["operation"] = "Cast"
                         col1, col2 = st.columns(2)
                         with col1:
                             column_to_cast = st.selectbox(
                                 "Column",
                                 options=dataset_columns,
-                                key=f"cast_column_{i}",
+                                key=f"column_to_cast_{i}",
+                                index=(
+                                    dataset_columns.index(
+                                        rules[rule][selected_dataset][i]
+                                        .get("data_map", {})
+                                        .get("column_to_cast", "--Select a column--")
+                                    )
+                                ),
+                                on_change=lambda i=i: (
+                                    update_column_to_cast(
+                                        rule,
+                                        selected_dataset,
+                                        i,
+                                        st.session_state.get(f"column_to_cast_{i}", ""),
+                                    )
+                                    if rule_selection != "Load rule"
+                                    else None
+                                ),
                                 help="Select a column to cast.",
                             )
                         with col2:
-                            key_name = f"cast_type_{column_to_cast}_{i}"
-                            if key_name not in st.session_state.cast:
-                                st.session_state.cast[key_name] = (
-                                    dtypes_map[
-                                        st.session_state.temp_datasets[
-                                            st.session_state.selected_dataset
-                                        ]
-                                        .schema[column_to_cast]
-                                        .dataType
-                                    ]
-                                    if column_to_cast
-                                    else "string"
-                                )
-                            if (
-                                rule_selection == "Load rule"
-                                and column_to_cast
-                                in rules[rule][selected_dataset][i]["data_map"]
-                            ):
-                                st.session_state.cast[key_name] = rules[rule][
-                                    selected_dataset
-                                ][i]["data_map"][column_to_cast]
+                            options = ["--Select a cast type--"] + list(
+                                dtypes_map.values()
+                            )
                             cast_type = st.selectbox(
                                 "Type",
-                                options=list(dtypes_map.values()),
+                                options=options,
                                 index=(
-                                    list(dtypes_map.values()).index(
-                                        st.session_state.cast[key_name]
+                                    options.index(
+                                        rules[rule][selected_dataset][i]
+                                        .get("data_map", {})
+                                        .get("cast_type", "--Select a cast type--")
                                     )
-                                    if key_name in st.session_state.cast
-                                    else 0
                                 ),
-                                key=key_name,
+                                key=f"cast_type_{i}",
                                 help="Select a type to cast the column.",
-                                on_change=lambda: (
-                                    update_cast_list(
-                                        rule, selected_dataset, i, column_to_cast
+                                on_change=lambda i=i: (
+                                    update_cast_type(
+                                        rule,
+                                        selected_dataset,
+                                        i,
+                                        st.session_state.get(f"cast_type_{i}", ""),
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -405,15 +459,21 @@ if list(st.session_state.temp_datasets):
                             delete_type = st.selectbox(
                                 "Delete Type",
                                 options=options,
-                                index=0,
+                                index=options.index(
+                                    rules[rule][selected_dataset][i]["data_map"].get(
+                                        "drop_by", "--Select a delete type--"
+                                    )
+                                ),
                                 key=f"delete_type_{i}",
-                                disabled=rule_selection == "Load rule",
-                                on_change=lambda: (
+                                on_change=lambda i=i: (
                                     update_delete_type(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        st.session_state[f"delete_type_{i}"],
+                                        st.session_state.get(
+                                            f"delete_type_{i}",
+                                            "--Select a delete type--",
+                                        ),
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -424,14 +484,18 @@ if list(st.session_state.temp_datasets):
                             st.text_input(
                                 "Data to delete",
                                 key=f"delete_data_{i}",
-                                on_change=lambda: (
+                                value=rules[rule][selected_dataset][i]
+                                .get("data_map", {})
+                                .get("data_reference", ""),
+                                on_change=lambda i=i: (
                                     update_data_source(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        data_reference=st.session_state[
-                                            f"delete_data_{i}"
-                                        ],
+                                        data_reference=st.session_state.get(
+                                            f"delete_data_{i}", ""
+                                        ),
+                                        process=process,
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -449,7 +513,7 @@ if list(st.session_state.temp_datasets):
                                 value=rules[rule][selected_dataset][i]
                                 .get("data_map", {})
                                 .get("new_column_name", ""),
-                                on_change=lambda: (
+                                on_change=lambda i=i: (
                                     update_column_name(
                                         rule,
                                         selected_dataset,
@@ -461,14 +525,16 @@ if list(st.session_state.temp_datasets):
                                     if rule_selection != "Load rule"
                                     else None
                                 ),
-                                disabled=rule_selection == "Load rule",
                                 help="Enter a name for the new column created by exploding the selected column.",
                             )
                         with col2:
                             st.text_input(
                                 "Data to explode",
+                                value=rules[rule][selected_dataset][i]
+                                .get("data_map", {})
+                                .get("data_reference", ""),
                                 key=f"explode_column_{i}",
-                                on_change=lambda: (
+                                on_change=lambda i=i: (
                                     update_data_source(
                                         rule,
                                         selected_dataset,
@@ -493,7 +559,7 @@ if list(st.session_state.temp_datasets):
                                 value=rules[rule][selected_dataset][i]
                                 .get("data_map", {})
                                 .get("new_column_name", ""),
-                                on_change=lambda: (
+                                on_change=lambda i=i: (
                                     update_column_name(
                                         rule,
                                         selected_dataset,
@@ -505,21 +571,23 @@ if list(st.session_state.temp_datasets):
                                     if rule_selection != "Load rule"
                                     else None
                                 ),
-                                disabled=rule_selection == "Load rule",
                                 help="Enter a name for the new column created by flattening the selected column.",
                             )
                         with col2:
                             st.text_input(
                                 "Data to flatten",
+                                value=rules[rule][selected_dataset][i]
+                                .get("data_map", {})
+                                .get("data_reference", ""),
                                 key=f"flatten_column_{i}",
-                                on_change=lambda: (
+                                on_change=lambda i=i: (
                                     update_data_source(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        data_reference=st.session_state[
-                                            f"flatten_column_{i}"
-                                        ],
+                                        data_reference=st.session_state.get(
+                                            f"flatten_column_{i}", ""
+                                        ),
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -533,7 +601,10 @@ if list(st.session_state.temp_datasets):
                         st.text_input(
                             "New Dataframe Name",
                             key=f"save_file_name_{i}",
-                            on_change=lambda: (
+                            value=rules[rule][selected_dataset][i]
+                            .get("data_map", {})
+                            .get("save_as", ""),
+                            on_change=lambda i=i: (
                                 update_new_dataset_name(
                                     rule,
                                     selected_dataset,
@@ -548,10 +619,9 @@ if list(st.session_state.temp_datasets):
                             help="Enter a name for the file to save the dataset.",
                         )
                 st.write("---")
-else:
-    st.warning("No data found to process", icon="⚠️")
+    
 
 
 # with d:
-#     st.write(st.session_state.temp_datasets)
-#     st.write(st.session_state.fusion_dataset_names)
+#     st.write(st.session_state.rules)
+    # st.write(st.session_state.fusion_dataset_names)

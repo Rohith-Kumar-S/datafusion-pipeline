@@ -67,9 +67,9 @@ with imports_col:
     )
     input = f"input_{st.session_state.total_inputs+1}"
     input_state = st.session_state.temp_inputs
-
+    input_name = "temp_input"
     if input_selection == "Create input source":
-        input_name = st.text_input(
+        st.text_input(
             "Input Source Name",
             key="input_source_name",
             disabled=input_selection != "Create input source",
@@ -94,7 +94,7 @@ with imports_col:
             placeholder="Select input source",
         )
         input_state = st.session_state.inputs
-    # col2.button('Save Input', on_click=lambda: save_input(), help="Save the input source for later use.", key=f"save_input_{input}", disabled=input_selection != 'Create input source')
+
     options = ["Link", "Stream", "Upload"]
     selection = st.segmented_control(
         "Data Source",
@@ -106,12 +106,15 @@ with imports_col:
 
     if not selection or "Link" in selection:
         if input_selection != "Create input source":
-            links = st.text_area(
-                "Link to data source",
-                input_state[input_name]["Link"]["source_links"],
-                key="source_links",
-                placeholder="https://example.com/data.csv",
-            )
+            if input_name not in input_state:
+                st.warning("No input source found", icon="⚠️")
+            else:
+                links = st.text_area(
+                    "Link to data source",
+                    input_state[input_name]["Link"]["source_links"],
+                    key="source_links",
+                    placeholder="https://example.com/data.csv",
+                )
         else:
             links = st.text_area(
                 "Link to data source",
@@ -121,18 +124,17 @@ with imports_col:
             )
         col1, col2 = st.columns(2)
 
-        if st.button(
-            "Import",
-            help="Import data from the provided links.",
-            disabled=input_selection != "Create input source",
-        ):
-            is_imported, dataframe_names = pipeline_utils.import_data(
-                links, "Link", from_ui=True
-            )
-            if is_imported:
-                for dataframe_name in dataframe_names:
-                    st.session_state.imported_data.append([dataframe_name, selection])
-                save_input()
+        # if st.button(
+        #     "Import",
+        #     help="Import data from the provided links.",
+        # ):
+        #     is_imported, dataframe_names = pipeline_utils.import_data(
+        #         links, "Link", from_ui=True
+        #     )
+        #     if is_imported:
+        #         for dataframe_name in dataframe_names:
+        #             st.session_state.imported_data.append([dataframe_name, selection])
+        #         save_input()
 
     elif "Stream" in selection:
         col1, col2, col3, col4 = st.columns(4, vertical_alignment="bottom")
@@ -185,26 +187,28 @@ with imports_col:
             value="iot_device_data",
             placeholder="iot_device_data.csv",
         )
-        if st.button("Import", disabled=input_selection != "Create input source"):
+        # if st.button("Import"):
 
-            try:
-                print("Importing stream data...", flush=True)
-                value = {}
-                value["stream_from"] = st.session_state.stream_from
-                value["server_spec"] = st.session_state.bootstrap_server
-                value["topic_to_subscribe"] = st.session_state.stream_topic
-                value["dataframe_name"] = st.session_state.stream_data_name
-                value["schema_skeleton"] = st.session_state.stream_data_schema
-                if pipeline_utils.import_data(value, "Stream", from_ui=True):
-                    st.session_state.stream_data = value
-                    st.session_state.imported_data.append(
-                        [st.session_state.stream_data_name, selection]
-                    )
-                    save_input()
-                    # st.toast(f"Stream data '{st.session_state.stream_data_name}' imported successfully!", icon="✅")
+        #     try:
+        #         value = {}
+        #         if input_selection == "Create input source":
+        #             value["stream_from"] = st.session_state.stream_from
+        #             value["server_spec"] = st.session_state.bootstrap_server
+        #             value["topic_to_subscribe"] = st.session_state.stream_topic
+        #             value["dataframe_name"] = st.session_state.stream_data_name
+        #             value["schema_skeleton"] = st.session_state.stream_data_schema
+        #         else:
+        #             value = input_state[input_name]["Stream"]
+        #         if pipeline_utils.import_data(value, "Stream", from_ui=True):
+        #             st.session_state.stream_data = value
+        #             st.session_state.imported_data.append(
+        #                 [st.session_state.stream_data_name, selection]
+        #             )
+        #             save_input()
+        #             # st.toast(f"Stream data '{st.session_state.stream_data_name}' imported successfully!", icon="✅")
 
-            except Exception as e:
-                print(e, flush=True)
+        #     except Exception as e:
+        #         print(e, flush=True)
 
     else:
         uploaded_files = st.file_uploader(
@@ -213,43 +217,84 @@ with imports_col:
         for uploaded_file in uploaded_files:
             bytes_data = uploaded_file.read()
             df = pd.read_csv(StringIO(bytes_data.decode("utf-8")))
-with views_col:
-    st.write("Imported Data:")
-    st.dataframe(
-        pd.DataFrame(
-            st.session_state.imported_data,
-            columns=["Dataset Name", "Source Type"],
+
+    if st.button("Import All"):
+        is_imported, dataframe_names = pipeline_utils.import_data(
+            st.session_state["source_links"], "Link", from_ui=True
         )
-        .drop_duplicates()
-        .reset_index(drop=True),
-        use_container_width=True,
-    )
-    if st.button(
-        "Save Input",
-        disabled=input_selection != "Create input source"
-        or input_name == ""
-        or len(st.session_state.imported_data) == 0,
-    ):
-        if input_name != "":
-            if input_name not in st.session_state.inputs:
-                st.session_state.imported_data = []
-                st.session_state.inputs[input_name] = input_state["temp_input"]
-                if st.session_state.inputs[input_name]["Stream"]:
-                    st.session_state.part_of_stream.append(
-                        st.session_state.inputs[input_name]["Stream"]["dataframe_name"]
-                    )
-                del st.session_state.temp_inputs["temp_input"]
-                st.toast(
-                    f"Input source '{input_name}' saved successfully!",
-                    icon="✅",
-                )
+        if is_imported:
+            for dataframe_name in dataframe_names:
+                st.session_state.imported_data.append([dataframe_name, selection])
+
+        try:
+            value = {}
+            if input_selection == "Create input source":
+                value["stream_from"] = st.session_state.stream_from
+                value["server_spec"] = st.session_state.bootstrap_server
+                value["topic_to_subscribe"] = st.session_state.stream_topic
+                value["dataframe_name"] = st.session_state.stream_data_name
+                value["schema_skeleton"] = st.session_state.stream_data_schema
             else:
-                st.toast(
-                    f"Input source '{input_name}' already exists.",
-                    icon="❌",
+                value = input_state[input_name]["Stream"]
+            if pipeline_utils.import_data(value, "Stream", from_ui=True):
+                st.session_state.stream_data = value
+                st.session_state.imported_data.append(
+                    [st.session_state.stream_data_name, selection]
                 )
-        else:
-            st.toast("Input source name cannot be empty.", icon="❌")
+        except Exception as e:
+            print(e, flush=True)
+        save_input()
+
+    st.write(
+        "Valid Imports:"
+        if input_selection == "Create input source"
+        else "Imported Sources✅: "
+    )
+    if not st.session_state.imported_data:
+        st.warning("No data imported", icon="⚠️")
+    else:
+        st.dataframe(
+            pd.DataFrame(
+                st.session_state.imported_data,
+                columns=["Dataset Name", "Source Type"],
+            )
+            .drop_duplicates()
+            .reset_index(drop=True),
+            use_container_width=True,
+        )
+        if st.button(
+            "Register Input",
+            disabled=input_selection != "Create input source"
+            or input_name == ""
+            or len(st.session_state.imported_data) == 0,
+        ):
+            if input_name != "":
+                if input_name not in st.session_state.inputs:
+                    st.session_state.imported_data = []
+                    st.session_state.inputs[input_name] = input_state["temp_input"]
+                    if st.session_state.inputs[input_name]["Stream"]:
+                        st.session_state.part_of_stream.append(
+                            st.session_state.inputs[input_name]["Stream"][
+                                "dataframe_name"
+                            ]
+                        )
+                    del st.session_state.temp_inputs["temp_input"]
+                    st.toast(
+                        f"Input source '{input_name}' saved successfully!",
+                        icon="✅",
+                    )
+                else:
+                    st.toast(
+                        f"Input source '{input_name}' already exists.",
+                        icon="❌",
+                    )
+            else:
+                st.toast("Input source name cannot be empty.", icon="❌")
+
+
+with views_col:
+    pass
+
 
 # with sidebar:
 #     st.write(st.session_state.inputs)
