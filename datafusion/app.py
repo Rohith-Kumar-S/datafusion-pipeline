@@ -90,6 +90,9 @@ if "stream_data" not in st.session_state:
 
 if "part_of_stream" not in st.session_state:
     st.session_state.part_of_stream = []
+    
+if "input_loaded" not in st.session_state:
+    st.session_state.input_loaded = False
 
 
 # # Initialize Spark

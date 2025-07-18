@@ -105,23 +105,18 @@ with imports_col:
     )
 
     if not selection or "Link" in selection:
-        if input_selection != "Create input source":
-            if input_name not in input_state:
-                st.warning("No input source found", icon="⚠️")
-            else:
-                links = st.text_area(
-                    "Link to data source",
-                    input_state[input_name]["Link"]["source_links"],
-                    key="source_links",
-                    placeholder="https://example.com/data.csv",
-                )
+        if input_name not in input_state:
+            st.warning("No input source found", icon="⚠️")
         else:
             links = st.text_area(
                 "Link to data source",
-                input_state["temp_input"]["Link"]["source_links"],
-                key="source_links",
+                input_state.get(input_name, {}).get("Link", {}).get("source_links", ""),
+                key=(
+                    "source_links" if input_selection == "Create input source" else None
+                ),
                 placeholder="https://example.com/data.csv",
             )
+
         col1, col2 = st.columns(2)
 
         # if st.button(
@@ -218,13 +213,24 @@ with imports_col:
             bytes_data = uploaded_file.read()
             df = pd.read_csv(StringIO(bytes_data.decode("utf-8")))
 
-    if st.button("Import All"):
-        is_imported, dataframe_names = pipeline_utils.import_data(
-            st.session_state["source_links"], "Link", from_ui=True
-        )
-        if is_imported:
-            for dataframe_name in dataframe_names:
-                st.session_state.imported_data.append([dataframe_name, selection])
+    if input_name in input_state and st.button("Import All"):
+        if (
+            "source_links" in st.session_state
+            or "Link" in input_state[input_name]
+            and "source_links" in input_state[input_name]["Link"]
+        ):
+            is_imported, dataframe_names = pipeline_utils.import_data(
+                (
+                    st.session_state["source_links"]
+                    if input_selection == "Create input source"
+                    else input_state[input_name]["Link"]["source_links"]
+                ),
+                "Link",
+                from_ui=True,
+            )
+            if is_imported:
+                for dataframe_name in dataframe_names:
+                    st.session_state.imported_data.append([dataframe_name, selection])
 
         try:
             value = {}
@@ -244,15 +250,19 @@ with imports_col:
         except Exception as e:
             print(e, flush=True)
         save_input()
+        if input_selection == "Load input source":
+            st.toast(
+                f"Input source '{input_name}' loaded successfully!",
+                icon="✅",
+            )
+            st.session_state.input_loaded = True
+        else:
+            st.session_state.input_loaded = False
 
-    st.write(
-        "Valid Imports:"
-        if input_selection == "Create input source"
-        else "Imported Sources✅: "
-    )
     if not st.session_state.imported_data:
         st.warning("No data imported", icon="⚠️")
     else:
+        st.write("Imported Sources✅: ")
         st.dataframe(
             pd.DataFrame(
                 st.session_state.imported_data,
@@ -265,27 +275,31 @@ with imports_col:
         if st.button(
             "Register Input",
             disabled=input_selection != "Create input source"
-            or input_name == ""
+            or st.session_state.input_source_name == ""
             or len(st.session_state.imported_data) == 0,
         ):
-            if input_name != "":
-                if input_name not in st.session_state.inputs:
+            if st.session_state.input_source_name != "":
+                if st.session_state.input_source_name not in st.session_state.inputs:
                     st.session_state.imported_data = []
-                    st.session_state.inputs[input_name] = input_state["temp_input"]
-                    if st.session_state.inputs[input_name]["Stream"]:
+                    st.session_state.inputs[st.session_state.input_source_name] = (
+                        input_state["temp_input"]
+                    )
+                    if st.session_state.inputs[st.session_state.input_source_name][
+                        "Stream"
+                    ]:
                         st.session_state.part_of_stream.append(
-                            st.session_state.inputs[input_name]["Stream"][
-                                "dataframe_name"
-                            ]
+                            st.session_state.inputs[st.session_state.input_source_name][
+                                "Stream"
+                            ]["dataframe_name"]
                         )
                     del st.session_state.temp_inputs["temp_input"]
                     st.toast(
-                        f"Input source '{input_name}' saved successfully!",
+                        f"Input source '{st.session_state.input_source_name}' saved successfully!",
                         icon="✅",
                     )
                 else:
                     st.toast(
-                        f"Input source '{input_name}' already exists.",
+                        f"Input source '{st.session_state.input_source_name}' already exists.",
                         icon="❌",
                     )
             else:

@@ -159,11 +159,12 @@ def update_cast_type(rule, selected_dataset, index, cast_type=None, process=""):
 # d, b = st.columns([2, 8], vertical_alignment="bottom")
 
 # with b:
-if not list(st.session_state.temp_datasets):
+if not st.session_state.input_loaded:
     st.warning("No data found to process", icon="⚠️")
     st.session_state.temp_datasets = {}
     st.session_state.datasets = {}
     st.session_state.views = {}
+    st.session_state.imported_data = []
 else:
     col1, col2 = st.columns(2)
     with col1:
