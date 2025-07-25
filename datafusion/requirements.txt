@@ -2,3 +2,4 @@ streamlit
 pandas
 kagglehub
 urllib3
+pymongo

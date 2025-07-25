@@ -24,10 +24,10 @@ class Pipeline:
                                 self.temp_datasets)
         self.exported_paths = []
         
-    def execute(self, pipeline, statusbar=None):
+    def execute(self, pipeline, i, progress_data):
         """Execute the pipeline by running each layer in sequence."""
         self.pipeline = pipeline
-        self.run_pipeline(statusbar)
+        self.run_pipeline(i, progress_data)
         return self.exported_paths
 
     def get_pipeline(self):
@@ -37,7 +37,7 @@ class Pipeline:
         """Return the paths of the datasets exported by the pipeline."""
         return self.exported_paths
 
-    def run_pipeline(self, statusbar=None):
+    def run_pipeline(self, i, progress_data):
         """Run the pipeline by executing each layer in sequence."""
         pipeline = self.pipeline
         pipeline_utils = self.pipeline_utils
@@ -74,10 +74,8 @@ class Pipeline:
                 print(f"Fusion layer executed successfully with datasets")
             elif layer["layer_type"] == "Target":
                 print(f"Executing Target layer")
-                self.exported_paths, user_interupt = pipeline_utils.export_datasets(layer["layer_selection"])
+                self.exported_paths = pipeline_utils.export_datasets(layer["layer_selection"])
                 print(f"Target layer executed successfully with datasets exported to {self.exported_paths}")
-                if user_interupt:
-                    statusbar.progress(0, text="Pipeline execution interrupted by user.")
-                    break
-            if not user_interupt:
-                statusbar.progress(int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline)))), text=f'Layer {layer["layer_type"]} executed successfully.')
+                
+            progress_data[i]['status'] = int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline))))
+            progress_data[i]['message'] = f'Layer {layer["layer_type"]} executed successfully.'

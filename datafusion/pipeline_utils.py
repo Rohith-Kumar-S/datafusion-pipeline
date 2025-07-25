@@ -23,6 +23,7 @@ class PipelineUtils:
         datasetpath_state={},
         views_state={},
         temp_datasets_state={},
+        pipeline_db=None,
     ):
         self.datasets_state = datasets_state
         self.datasetpath_state = datasetpath_state
@@ -42,6 +43,13 @@ class PipelineUtils:
             types.ByteType(): "byte",
         }
         self.reverse_dtypes_map = {v: k for k, v in self.dtypes_map.items()}
+        self.pipeline_db = pipeline_db
+        self.inputs = None
+        self.rules = None
+        self.fusions = None
+        self.targets = None
+        self.pipelines = None
+        self.active_streams = None
 
     def get_datasets_state(self):
         """Return the current state of datasets."""
@@ -59,13 +67,32 @@ class PipelineUtils:
         """Return the current state of temporary datasets."""
         return self.temp_datasets_state
 
-    def get_user_input_state(self):
-        """Return the current user input state."""
-        return self.user_input_state
+    def get_inputs(self):
+        """Return the current state of inputs."""
+        return self.inputs
+    
+    def get_rules(self):
+        """Return the current state of rules."""
+        return self.rules
+    
+    def get_fusions(self):
+        """Return the current state of fusions."""
+        return self.fusions
+    
+    def get_targets(self):
+        """Return the current state of targets."""
+        return self.targets
+    
+    def get_pipelines(self):
+        """Return the current state of pipelines."""
+        return self.pipelines
+
+    def get_active_streams(self):
+        """Return the current state of active streams."""
+        return self.active_streams
 
     def add_dataset(self, file_name, dataset_path):
         dataset_name = file_name.lower().replace(" ", "_")
-        self.datasets_state[dataset_name] = None
         self.datasetpath_state[dataset_name] = dataset_path
 
     def find_files(self, directory, extensions=[".csv", ".json", ".xlsx"]):
@@ -148,6 +175,7 @@ class PipelineUtils:
                         data = self.spark_session_state.read.csv(
                             dataset_path, header=True, inferSchema=True, nullValue="NA"
                         )
+
                     self.update_data_state_variables(
                         dataset_name.split(".")[0], data, from_ui
                     )
@@ -344,7 +372,6 @@ class PipelineUtils:
         )
         datasets = export_data["datasets"]
         paths = []
-        user_interupt = False
         if export_data["type"] == "download":
             for dataset in datasets:
                 requested_conversion = export_data["conversions"][dataset]
@@ -416,13 +443,100 @@ class PipelineUtils:
                     )
                     try:
                         query.awaitTermination()
-                    except KeyboardInterrupt:
+                    except Exception as e:
                         query.stop()
-                        user_interupt = True
                         st.warning("Streaming was stopped by the user.")
                 else:
                     device_data_output(self.temp_datasets_state[dataset], 0)
-        return paths, user_interupt
+        return paths
 
     def test_spark(self):
         print(self.spark_session_state)
+
+    def load_input_sources(self, read_only=False):
+        input_key = None
+        input_sources = self.pipeline_db.input_sources
+        if not read_only and not list(input_sources.find()):
+            input_sources.insert_one({"value": {}})
+        for input_source in input_sources.find():
+            # print("Input Source:", input_source, flush=True)
+            input_key = input_source["_id"]
+            self.inputs = input_source["value"]
+        return input_key, input_sources
+
+    def load_rules(self, input_source=None, read_only=False):
+        rules_key = None
+        if input_source!=None:
+            db_rules = self.pipeline_db.db_rules
+            if not read_only and not list(
+                db_rules.find({"input_source": input_source})
+            ):
+                db_rules.insert_one(
+                    {"input_source": input_source, "value": {}}
+                )
+            for rules_in_db in db_rules.find(
+                {"input_source": input_source}
+            ):
+                # print("rules_in_db:", rules_in_db, flush=True)
+                rules_key = rules_in_db["_id"]
+                self.rules = rules_in_db["value"]
+            return rules_key, db_rules
+
+    def load_fusions(self, input_source=None, read_only=False):
+        fusions_key = None
+        if input_source !=None:
+            db_fusions = self.pipeline_db.db_fusions
+            if not read_only and not list(
+                db_fusions.find({"input_source": input_source})
+            ):
+                db_fusions.insert_one(
+                    {"input_source": input_source, "value": {}}
+                )
+            for fusions_in_db in db_fusions.find(
+                {"input_source": input_source}
+            ):
+                # print("fusions_in_db:", fusions_in_db, flush=True)
+                fusions_key = fusions_in_db["_id"]
+                self.fusions = fusions_in_db["value"]
+            return fusions_key, db_fusions
+
+    def load_targets(self, input_source=None, read_only=False):
+        targets_key = None
+        if input_source != None:
+            db_targets = self.pipeline_db.db_targets
+            if not read_only and not list(
+                db_targets.find({"input_source": input_source})
+            ):
+                db_targets.insert_one(
+                {"input_source": input_source, "value": {}}
+            )
+            for targets_in_db in db_targets.find(
+                {"input_source": input_source}
+            ):
+                # print("targets_in_db:", targets_in_db, flush=True)
+                targets_key = targets_in_db["_id"]
+                self.targets = targets_in_db["value"]
+            return targets_key, db_targets
+
+    def load_pipelines(self, read_only=False):
+        pipe_key = None
+        db_pipes = self.pipeline_db.db_pipes
+        if not read_only and not list(db_pipes.find()):
+            db_pipes.insert_one({"value": {}})
+        for pipe in db_pipes.find():
+            # print("Pipeline:", pipe, flush=True)
+            pipe_key = pipe["_id"]
+            self.pipelines = pipe["value"]
+        return pipe_key, db_pipes
+
+    def load_active_streams(self):
+        active_pipes = None
+        db_active_pipe_streams = self.pipeline_db.db_active_pipe_streams
+        if not list(db_active_pipe_streams.find()):
+            db_active_pipe_streams.insert_one({"value": {}})
+        for pipe in db_active_pipe_streams.find():
+            # print("Active Pipeline:", pipe, flush=True)
+            active_pipes = pipe["value"]
+        return active_pipes
+    
+    

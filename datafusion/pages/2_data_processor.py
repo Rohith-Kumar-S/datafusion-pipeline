@@ -2,7 +2,7 @@ from time import time
 import streamlit as st
 from pyspark.sql import types
 from pyspark.sql.functions import to_date, col, explode, expr
-import random
+from bson.objectid import ObjectId
 import time
 
 from pipeline_utils import PipelineUtils
@@ -13,6 +13,7 @@ pipeline_utils = PipelineUtils(
     st.session_state.dataset_paths,
     st.session_state.views,
     st.session_state.temp_datasets,
+    pipeline_db=st.session_state.pipeline_db,
 )
 
 
@@ -135,6 +136,7 @@ def update_column_to_cast(rule, selected_dataset, index, column_to_cast=None):
             "column_to_cast"
         ] = column_to_cast
 
+
 def update_cast_type(rule, selected_dataset, index, cast_type=None, process=""):
     if cast_type == "--Select a cast type--":
         return
@@ -159,13 +161,14 @@ def update_cast_type(rule, selected_dataset, index, cast_type=None, process=""):
 # d, b = st.columns([2, 8], vertical_alignment="bottom")
 
 # with b:
-if not st.session_state.input_loaded:
+if st.session_state.input_loaded == "":
     st.warning("No data found to process", icon="⚠️")
     st.session_state.temp_datasets = {}
     st.session_state.datasets = {}
     st.session_state.views = {}
     st.session_state.imported_data = []
 else:
+    rules_key, db_rules = pipeline_utils.load_rules(st.session_state.input_loaded)
     col1, col2 = st.columns(2)
     with col1:
         selected_dataset = st.selectbox(
@@ -292,8 +295,21 @@ else:
                     if new_rule_name not in st.session_state.rules:
                         del st.session_state.temp_rules[rule]
                         st.session_state.rules[new_rule_name] = temp
-                        st.toast("Rule created successfully!", icon="✅")
-                        time.sleep(0.2)
+                        db_rules.update_one(
+                            {"_id": ObjectId(rules_key)},
+                            {
+                                "$set": {
+                                    "value": st.session_state.rules,
+                                    "input_source": st.session_state.input_loaded,
+                                }
+                            },
+                        )
+                        st.session_state.rules = {}
+                        for db_rule in db_rules.find({"input_source": st.session_state.input_loaded}):
+                            print("Rule Source:", db_rule, flush=True)
+                            st.session_state.rules = db_rule["value"]
+                    st.toast("Rule created successfully!", icon="✅")
+                    time.sleep(0.2)
                 else:
                     st.toast("Rule name can't be empty.", icon="❌")
                     time.sleep(0.2)
@@ -620,9 +636,8 @@ else:
                             help="Enter a name for the file to save the dataset.",
                         )
                 st.write("---")
-    
 
 
 # with d:
 #     st.write(st.session_state.rules)
-    # st.write(st.session_state.fusion_dataset_names)
+# st.write(st.session_state.fusion_dataset_names)

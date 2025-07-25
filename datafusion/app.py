@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from pyspark.sql import SparkSession
+from pymongo import MongoClient
 
 st.set_page_config(
     page_title="Data Fusion Pipeline",
@@ -90,16 +91,39 @@ if "stream_data" not in st.session_state:
 
 if "part_of_stream" not in st.session_state:
     st.session_state.part_of_stream = []
-    
+
 if "input_loaded" not in st.session_state:
-    st.session_state.input_loaded = False
+    st.session_state.input_loaded = ""
+    
+if "pipeline_db" not in st.session_state:
+    st.session_state.pipeline_db = None
+
+if "input_key" not in st.session_state:
+    st.session_state.input_key = ""
+    
+if "rules_key" not in st.session_state:
+    st.session_state.rules_key = ""
+
+if "fusions_key" not in st.session_state:
+    st.session_state.fusions_key = ""
+
+if "targets_key" not in st.session_state:
+    st.session_state.targets_key = ""
+    
+if "db_key" not in st.session_state:
+    st.session_state.db_key = ""
+
+if "main_thread_running" not in st.session_state:
+    st.session_state.main_thread_running = False
+
+if "child_threads" not in st.session_state:
+    st.session_state.child_threads = []
 
 
 # # Initialize Spark
 @st.cache_resource
 def Spark_Data_Fusion():
     jar_path = os.path.join("dependencies", "jars", "postgresql-42.7.7.jar")
-
     return (
         SparkSession.builder.config("spark.streaming.stopGracefullyOnShutdown", True)
         .config(
@@ -111,6 +135,11 @@ def Spark_Data_Fusion():
         .getOrCreate()
     )
 
+if st.session_state.pipeline_db is None:
+    client = MongoClient(os.environ["MONGO_URI"] + "/?authSource=admin")
+    print("MongoDB connection established ", client.list_database_names(), flush=True)
+    db = client["datafusion"]
+    st.session_state.pipeline_db = db
 
 st.session_state.spark = Spark_Data_Fusion()
 

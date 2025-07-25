@@ -4,18 +4,20 @@ services:
   datafusion-app:
     build:
       context: ./datafusion
-    image: phantom/datafusion:latest
+    image: phantom/data-fusion:latest
     container_name: datafusion-app
     ports:
       - "8501:8501"
       - "4040:4040"
     environment:
       SPARK_UI_PORT: 4040
+      MONGO_URI: mongodb://admin:admin123@rk-mongo:27017
     volumes:
       - ./datafusion:/app
     depends_on:
       - rk-kafka
-  
+      - rk-mongo
+
   rk-pyspark-jupyter:
     image: easewithdata/pyspark-jupyter-lab
     user: root
@@ -26,11 +28,13 @@ services:
     environment:
       JUPYTER_PORT: 8889
       SPARK_UI_PORT: 4041
+      MONGO_URI: mongodb://admin:admin123@rk-mongo:27017
       GRANT_SUDO: yes
     volumes:
       - ./datafusion:/app
     depends_on:
       - rk-kafka
+      - rk-mongo
 
   rk-zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -60,6 +64,19 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_CREATE_TOPICS: "raw:1:1"
+  
+  rk-mongo:
+    image: mongo:latest
+    container_name: rk-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    volumes:
+      - mongo_data:/data/db
+
 
 volumes:
   streaming_data:
+  mongo_data:
