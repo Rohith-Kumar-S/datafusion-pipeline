@@ -169,6 +169,8 @@ if st.session_state.input_loaded == "":
     st.session_state.imported_data = []
 else:
     rules_key, db_rules = pipeline_utils.load_rules(st.session_state.input_loaded)
+    if not st.session_state.rules:
+        st.session_state.rules = pipeline_utils.get_rules()
     col1, col2 = st.columns(2)
     with col1:
         selected_dataset = st.selectbox(
@@ -205,10 +207,13 @@ else:
                     df = st.session_state.spark.sql(query)
                     rows = df.count()
                     if rows > 10:
-                        st.dataframe(
-                            df.limit(rows if rows < 60 else 60).toPandas(),
-                            height=350,
-                        )
+                        try: 
+                            st.dataframe(
+                                df.limit(rows if rows < 60 else 60).toPandas(),
+                                height=350,
+                            )
+                        except Exception as e:
+                            st.warning("⚠️ Data cant be viewed")
                     else:
                         try:
                             st.dataframe(df.limit(rows).toPandas())
@@ -639,5 +644,5 @@ else:
 
 
 # with d:
-#     st.write(st.session_state.rules)
+#     st.write(st.session_state.temp_rules)
 # st.write(st.session_state.fusion_dataset_names)

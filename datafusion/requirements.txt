@@ -1,4 +1,7 @@
+py4j
 streamlit
+streamlit-autorefresh
+numpy
 pandas
 kagglehub
 urllib3

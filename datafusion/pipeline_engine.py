@@ -23,12 +23,13 @@ class Pipeline:
                                 self.views,
                                 self.temp_datasets)
         self.exported_paths = []
+        self.query = None
         
-    def execute(self, pipeline, i, progress_data):
+    def execute(self, pipeline, j, progress_data):
         """Execute the pipeline by running each layer in sequence."""
         self.pipeline = pipeline
-        self.run_pipeline(i, progress_data)
-        return self.exported_paths
+        self.run_pipeline(j, progress_data)
+        # return self.exported_paths, self.query
 
     def get_pipeline(self):
         return self.pipeline
@@ -36,8 +37,12 @@ class Pipeline:
     def get_exported_paths(self):
         """Return the paths of the datasets exported by the pipeline."""
         return self.exported_paths
+    
+    def get_query(self):
+        """Return the query object for the pipeline."""
+        return self.query
 
-    def run_pipeline(self, i, progress_data):
+    def run_pipeline(self, j, progress_data):
         """Run the pipeline by executing each layer in sequence."""
         pipeline = self.pipeline
         pipeline_utils = self.pipeline_utils
@@ -53,29 +58,36 @@ class Pipeline:
         # Process each layer in the pipeline
         for i, layer in enumerate(pipeline):
             if layer["layer_type"] == "Source":
-                print(f"Executing Source layer")
+                print(f"Executing Source layer", flush=True)
                 if layer["layer_selection"]["Link"]:
                     pipeline_utils.import_data(layer["layer_selection"]["Link"]["source_links"], "Link", from_ui=False)
                 if layer["layer_selection"]["Stream"]:
                     pipeline_utils.import_data(layer["layer_selection"]["Stream"], "Stream", from_ui=False)
                 if layer["layer_selection"]["Upload"]:
                     pass
-                print(f"Source layer executed successfully with datasets")
+                print(f"Source layer executed successfully with datasets", flush=True)
             elif layer["layer_type"] == "Processor":
-                print(f"Executing Processor layer")
-                pipeline_utils.test_rule(layer["layer_selection"])
-                print(f"Processor layer executed successfully with datasets")
+                print(f"Executing Processor layer", flush=True)
+                success = pipeline_utils.test_rule(layer["layer_selection"], from_ui=False)
+                if success:
+                    print(f"Processor layer executed successfully with datasets", flush=True)
+                else:
+                    print(f"Processor layer execution failed. Please check the rules.", flush=True)
+                    break
+                
             elif layer["layer_type"] == "Fusion":
-                print(f"Executing Fusion layer")
+                print(f"Executing Fusion layer", flush=True)
                 pipeline_utils.fuse_datasets(layer["layer_selection"][0]["fused_dataset_name"],
                                     layer["layer_selection"][0]["datasets_to_fuse"],
                                     layer["layer_selection"][0]["fuse_by"],
                                     layer["layer_selection"][0]["fuse_how"])
-                print(f"Fusion layer executed successfully with datasets")
+                print(f"Fusion layer executed successfully with datasets", flush=True)
             elif layer["layer_type"] == "Target":
-                print(f"Executing Target layer")
-                self.exported_paths = pipeline_utils.export_datasets(layer["layer_selection"])
-                print(f"Target layer executed successfully with datasets exported to {self.exported_paths}")
+                print(f"Executing Target layer", flush=True)
+                self.exported_paths, self.query = pipeline_utils.export_datasets(layer["layer_selection"])
+                print(f"Target layer executed successfully with datasets exported to {self.exported_paths}", flush=True)
                 
-            progress_data[i]['status'] = int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline))))
-            progress_data[i]['message'] = f'Layer {layer["layer_type"]} executed successfully.'
+            progress = int(10 + (90 / len(pipeline)) + (i * (90 / len(pipeline))))
+            print(f"Progress: {progress}%", flush=True)
+            progress_data[j]['progress'] = progress
+            progress_data[j]['status'] = f'Layer {layer["layer_type"]} executed successfully.'

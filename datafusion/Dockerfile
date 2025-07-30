@@ -1,4 +1,4 @@
-FROM easewithdata/pyspark-jupyter-lab
+FROM bitnami/spark:3.3.4
 
 # Switch to root for installations
 USER root
@@ -10,10 +10,11 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Update package list and install Python pip
-RUN apt-get update && apt-get install -y python3-pip python3-dev
+RUN apt-get update && apt-get install -y python3-dev
 
 # Upgrade pip and install requirements
 RUN python3 -m pip install --upgrade pip
+
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy application files

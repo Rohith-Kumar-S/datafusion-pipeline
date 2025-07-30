@@ -109,6 +109,8 @@ if st.session_state.input_loaded == "":
 else:
     pipeline_utils = PipelineUtils( pipeline_db=st.session_state.pipeline_db)
     targets_key, db_targets = pipeline_utils.load_targets(st.session_state.input_loaded)
+    if not st.session_state.targets:
+        st.session_state.targets = pipeline_utils.get_targets()
     st.segmented_control(
         "**Target Builder**",
         ["Create target", "Load target"],

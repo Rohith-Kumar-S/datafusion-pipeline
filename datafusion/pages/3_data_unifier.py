@@ -48,6 +48,8 @@ if st.session_state.input_loaded == "":
     st.warning("No data found to fuse", icon="⚠️")
 else:
     fusions_key, db_fusions = pipeline_utils.load_fusions(st.session_state.input_loaded)
+    if not st.session_state.fusions:
+        st.session_state.fusions = pipeline_utils.get_fusions()
     fusions = None
     fusion_selection = st.segmented_control(
         "**Fusion builder**",

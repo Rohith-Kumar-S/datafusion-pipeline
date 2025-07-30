@@ -3,6 +3,7 @@ import os
 from pyspark.sql import SparkSession
 from pymongo import MongoClient
 
+
 st.set_page_config(
     page_title="Data Fusion Pipeline",
     page_icon=":bar_chart:",
@@ -118,6 +119,12 @@ if "main_thread_running" not in st.session_state:
 
 if "child_threads" not in st.session_state:
     st.session_state.child_threads = []
+    
+if "exported_paths" not in st.session_state:
+    st.session_state.exported_paths = {}
+    
+if "query" not in st.session_state:
+    st.session_state.query = {}
 
 
 # # Initialize Spark
@@ -142,6 +149,7 @@ if st.session_state.pipeline_db is None:
     st.session_state.pipeline_db = db
 
 st.session_state.spark = Spark_Data_Fusion()
+print("Spark version:", st.session_state.spark.version)
 
 st.title("Data Fusion Pipeline")
 pages = {

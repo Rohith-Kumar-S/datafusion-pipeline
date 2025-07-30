@@ -6,6 +6,8 @@ from pipeline_utils import PipelineUtils
 pipeline_utils = PipelineUtils(pipeline_db=st.session_state.pipeline_db)
 pipeline_utils.load_input_sources(read_only=True)
 pipe_key, db_pipes = pipeline_utils.load_pipelines()
+if not st.session_state.pipelines:
+    st.session_state.pipelines = pipeline_utils.get_pipelines()
 
 
 def add_layer(pipeline):

@@ -216,7 +216,8 @@ class PipelineUtils:
                     dataframe_names.append(value["dataframe_name"])
                 except Exception as e:
                     print(f"Error importing stream data: {e}", flush=True)
-                    st.error(f"Error importing stream data")
+                    if from_ui:
+                        st.error(f"Error importing stream data: {e}")
                     return False
         return True, dataframe_names
 
@@ -228,47 +229,56 @@ class PipelineUtils:
             self.reset_views(dataset_name)
             for process in processes:
                 data_map = process.get("data_map", {})
+                if not data_map:
+                    return False
                 match process["operation"]:
                     case "Cast":
-                        for column, cast_type in data_map.items():
-                            if cast_type:
-                                try:
-                                    if cast_type == "date":
-                                        self.temp_datasets_state[
-                                            dataset_name
-                                        ] = self.temp_datasets_state[
-                                            dataset_name
-                                        ].withColumn(
-                                            column, F.to_date(F.col(column), "MM-dd-yy")
-                                        )
-                                    else:
-                                        self.temp_datasets_state[
-                                            dataset_name
-                                        ] = self.temp_datasets_state[
-                                            dataset_name
-                                        ].withColumn(
-                                            column,
-                                            self.temp_datasets_state[dataset_name][
-                                                column
-                                            ].cast(self.reverse_dtypes_map[cast_type]),
-                                        )
-                                    if from_ui:
-                                        view_name = self.views_state[dataset_name][
-                                            "view_name"
-                                        ]
-                                        self.temp_datasets_state[
-                                            dataset_name
-                                        ].createOrReplaceTempView(view_name)
-                                        st.toast(
-                                            "Cast applied successfully!", icon="✅"
-                                        )
-                                        time.sleep(0.3)
-                                except Exception as e:
-                                    if from_ui:
-                                        st.error(
-                                            f"Error casting column {column} to {cast_type}: {e}"
-                                        )
-                                        time.sleep(0.3)
+                        column_to_cast = data_map.get("column_to_cast", None)
+                        cast_type = data_map.get("cast_type", None)
+                        if cast_type and column_to_cast:
+                            try:
+                                if cast_type == "date":
+                                    self.temp_datasets_state[
+                                        dataset_name
+                                    ] = self.temp_datasets_state[
+                                        dataset_name
+                                    ].withColumn(
+                                        column_to_cast, F.to_date(F.col(column_to_cast), "MM-dd-yy")
+                                    )
+                                else:
+                                    self.temp_datasets_state[
+                                        dataset_name
+                                    ] = self.temp_datasets_state[
+                                        dataset_name
+                                    ].withColumn(
+                                        column_to_cast,
+                                        self.temp_datasets_state[dataset_name][
+                                            column_to_cast
+                                        ].cast(self.reverse_dtypes_map[cast_type]),
+                                    )
+                                if from_ui:
+                                    view_name = self.views_state[dataset_name][
+                                        "view_name"
+                                    ]
+                                    self.temp_datasets_state[
+                                        dataset_name
+                                    ].createOrReplaceTempView(view_name)
+                                    st.toast(
+                                        "Cast applied successfully!", icon="✅"
+                                    )
+                                    time.sleep(0.3)
+                            except Exception as e:
+                                if from_ui:
+                                    st.error(
+                                        f"Error casting column {column_to_cast} to {cast_type}: {e}"
+                                    )
+                                    time.sleep(0.3)
+                        else:
+                            if not from_ui:
+                                print(
+                                    "Column to cast and cast type cannot be empty.",
+                                    flush=True,
+                                )
                     case "Delete":
                         drop_by = data_map.get("drop_by", "")
                         data_reference = data_map.get("data_reference", "")
@@ -283,8 +293,8 @@ class PipelineUtils:
                             self.temp_datasets_state[
                                 dataset_name
                             ].createOrReplaceTempView(view_name)
-                        st.toast("Delete applied successfully!", icon="✅")
-                        time.sleep(0.3)
+                            st.toast("Delete applied successfully!", icon="✅")
+                            time.sleep(0.3)
                     case "Explode":
                         column_name = data_map.get("new_column_name", "")
                         data_source = data_map.get("data_reference", "")
@@ -301,10 +311,13 @@ class PipelineUtils:
                                 self.temp_datasets_state[
                                     dataset_name
                                 ].createOrReplaceTempView(view_name)
-                            st.toast("Explode applied successfully!", icon="✅")
-                            time.sleep(0.3)
+                                st.toast("Explode applied successfully!", icon="✅")
+                                time.sleep(0.3)
                         except Exception as e:
-                            st.error(f"Error exploding column {column_name}: {e}")
+                            if from_ui:
+                                st.error(f"Error exploding column {column_name}: {e}")
+                            else:
+                                print(f"Error exploding column {column_name}: {e}", flush=True)
                     case "Flatten":
                         column_name = data_map.get("new_column_name", "")
                         data_source = data_map.get("data_reference", "")
@@ -321,10 +334,13 @@ class PipelineUtils:
                                 self.temp_datasets_state[
                                     dataset_name
                                 ].createOrReplaceTempView(view_name)
-                            st.toast("Flatten applied successfully!", icon="✅")
-                            time.sleep(0.3)
+                                st.toast("Flatten applied successfully!", icon="✅")
+                                time.sleep(0.3)
                         except Exception as e:
-                            st.error(f"Error flattening column {column_name}: {e}")
+                            if from_ui:
+                                st.error(f"Error flattening column {column_name}: {e}")
+                            else:
+                                print(f"Error flattening column {column_name}: {e}", flush=True)
                     case "Save":
                         new_dataframe_name = data_map.get("save_as", "")
                         if new_dataframe_name not in self.temp_datasets_state:
@@ -339,8 +355,9 @@ class PipelineUtils:
                                 self.temp_datasets_state[
                                     dataset_name
                                 ].createOrReplaceTempView(view_name)
-                            st.toast("Save applied successfully!", icon="✅")
-                            time.sleep(0.3)
+                                st.toast("Save applied successfully!", icon="✅")
+                                time.sleep(0.3)
+        return True
 
     def get_fusable_columns(self, datasets):
         dataset = datasets[0]
@@ -372,6 +389,7 @@ class PipelineUtils:
         )
         datasets = export_data["datasets"]
         paths = []
+        query = None
         if export_data["type"] == "download":
             for dataset in datasets:
                 requested_conversion = export_data["conversions"][dataset]
@@ -401,14 +419,12 @@ class PipelineUtils:
                         .writeStream.format("console")
                         .outputMode("append")
                         .option("checkpointLocation", "checkpoint_dir")
-                        .start()
+                        # .start()
                     )
-                try:
-                    query.awaitTermination()
-                except KeyboardInterrupt:
-                    query.stop()
-                    user_interupt = True
-                    st.warning("Streaming was stopped by the user.")
+                # try:
+                #     query.awaitTermination()
+                # except KeyboardInterrupt:
+                #     query.stop()
         elif export_data["type"] == "jdbc":
             for dataset in datasets:
                 is_part_of_stream = dataset in export_data["part_of_stream"]
@@ -439,16 +455,15 @@ class PipelineUtils:
                             "checkpointLocation",
                             os.path.join("checkpoint_dir", dataset),
                         )
-                        .start()
+                        # .start()
                     )
-                    try:
-                        query.awaitTermination()
-                    except Exception as e:
-                        query.stop()
-                        st.warning("Streaming was stopped by the user.")
+                    # try:
+                    #     query.awaitTermination()
+                    # except Exception as e:
+                    #     query.stop()
                 else:
                     device_data_output(self.temp_datasets_state[dataset], 0)
-        return paths
+        return paths, query
 
     def test_spark(self):
         print(self.spark_session_state)

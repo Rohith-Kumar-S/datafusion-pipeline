@@ -4,7 +4,7 @@ services:
   datafusion-app:
     build:
       context: ./datafusion
-    image: phantom/data-fusion:latest
+    image: phantom/testspark:latest
     container_name: datafusion-app
     ports:
       - "8501:8501"
