@@ -134,17 +134,16 @@ with st.container(height=462):
 
         options = ["-- Select an option --"]
         if st.session_state[f"layer_type_{i}"] == "Source":
-            options.extend(list(st.session_state.inputs.keys()))
+            options.extend(list(pipeline_utils.get_inputs().keys()))
         elif st.session_state[f"layer_type_{i}"] == "Processor":
-            print("Input selected:########## ", selected_input, flush=True)
             pipeline_utils.load_rules(input_source=selected_input, read_only=True)
-            options.extend(list(st.session_state.rules.keys()))
+            options.extend(list(pipeline_utils.get_rules().keys()))
         elif st.session_state[f"layer_type_{i}"] == "Fusion":
             pipeline_utils.load_fusions(input_source=selected_input, read_only=True)
-            options.extend(list(st.session_state.fusions.keys()))
+            options.extend(list(pipeline_utils.get_fusions().keys()))
         elif st.session_state[f"layer_type_{i}"] == "Target":
             pipeline_utils.load_targets(input_source=selected_input, read_only=True)
-            options.extend(list(st.session_state.targets.keys()))
+            options.extend(list(pipeline_utils.get_targets().keys()))
         col2.selectbox(
             "Select layer",
             options=options,
@@ -181,4 +180,4 @@ with st.container(height=462):
 
 
 # with s1:
-#     st.write(st.session_state.temp_pipelines)
+#     st.write(st.session_state.pipelines)

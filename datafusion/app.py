@@ -125,7 +125,15 @@ if "exported_paths" not in st.session_state:
     
 if "query" not in st.session_state:
     st.session_state.query = {}
+    
+if "active_streams" not in st.session_state:
+    st.session_state.active_streams = {}
 
+if  "active_streams_key" not in st.session_state:
+    st.session_state.active_streams_key = None
+
+if "db_active_pipe_streams" not in st.session_state:
+    st.session_state.db_active_pipe_streams = None
 
 # # Initialize Spark
 @st.cache_resource
@@ -141,15 +149,14 @@ def Spark_Data_Fusion():
         .appName("DataFusion")
         .getOrCreate()
     )
+st.session_state.spark = Spark_Data_Fusion()
 
 if st.session_state.pipeline_db is None:
     client = MongoClient(os.environ["MONGO_URI"] + "/?authSource=admin")
     print("MongoDB connection established ", client.list_database_names(), flush=True)
+    print("Running with Spark version:", st.session_state.spark.version, flush=True)
     db = client["datafusion"]
     st.session_state.pipeline_db = db
-
-st.session_state.spark = Spark_Data_Fusion()
-print("Spark version:", st.session_state.spark.version)
 
 st.title("Data Fusion Pipeline")
 pages = {

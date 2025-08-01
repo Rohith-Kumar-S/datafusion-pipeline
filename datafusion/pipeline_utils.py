@@ -49,7 +49,6 @@ class PipelineUtils:
         self.fusions = None
         self.targets = None
         self.pipelines = None
-        self.active_streams = None
 
     def get_datasets_state(self):
         """Return the current state of datasets."""
@@ -86,10 +85,6 @@ class PipelineUtils:
     def get_pipelines(self):
         """Return the current state of pipelines."""
         return self.pipelines
-
-    def get_active_streams(self):
-        """Return the current state of active streams."""
-        return self.active_streams
 
     def add_dataset(self, file_name, dataset_path):
         dataset_name = file_name.lower().replace(" ", "_")
@@ -238,12 +233,18 @@ class PipelineUtils:
                         if cast_type and column_to_cast:
                             try:
                                 if cast_type == "date":
+                                    cast_from = data_map.get("cast_from", None)
+                                    cast_to = data_map.get("cast_to", None)
                                     self.temp_datasets_state[
                                         dataset_name
                                     ] = self.temp_datasets_state[
                                         dataset_name
                                     ].withColumn(
-                                        column_to_cast, F.to_date(F.col(column_to_cast), "MM-dd-yy")
+                                        column_to_cast,
+                                        F.date_format(
+                                            F.to_timestamp(F.col(column_to_cast), cast_from),  # parse original
+                                            cast_to  # desired output format
+                                        )
                                     )
                                 else:
                                     self.temp_datasets_state[
@@ -279,13 +280,105 @@ class PipelineUtils:
                                     "Column to cast and cast type cannot be empty.",
                                     flush=True,
                                 )
-                    case "Delete":
+                    case "Filter":
+                        filter_source = data_map.get("source_reference", None)
+                        filter_value = data_map.get("data_reference", None)
+                        filter_operator = data_map.get("operator", None)
+                        if filter_source and filter_value and filter_operator:
+                            match filter_operator:
+                                case "==":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) == filter_value
+                                        )
+                                    )
+                                case "!=":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) != filter_value
+                                        )
+                                    )
+                                case "<":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) < filter_value
+                                        )
+                                    )
+                                case "<=":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) <= filter_value
+                                        )
+                                    )
+                                case ">":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) > filter_value
+                                        )
+                                    )
+                                case ">=":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source) >= filter_value
+                                        )
+                                    )
+                                case "contains":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source).contains(filter_value)
+                                    )
+                                )
+                                case "startswith":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source).startswith(filter_value)
+                                        )
+                                    )
+                                case "endswith":
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .filter(
+                                            F.col(filter_source).endswith(filter_value)
+                                        )
+                                    )
+                            if from_ui:
+                                view_name = self.views_state[dataset_name]["view_name"]
+                                self.temp_datasets_state[
+                                    dataset_name
+                                ].createOrReplaceTempView(view_name)
+                                st.toast("Filter applied successfully!", icon="✅")
+                                time.sleep(0.3)
+                    case "Drop":
                         drop_by = data_map.get("drop_by", "")
-                        data_reference = data_map.get("data_reference", "")
+                        data_reference = data_map.get("data_reference", [])
+                        if data_reference[0] == "All":
+                            data_reference = self.datasets_state[
+                                dataset_name
+                            ].columns
                         if drop_by == "column":
                             self.temp_datasets_state[dataset_name] = (
                                 self.temp_datasets_state[dataset_name].drop(
-                                    data_reference
+                                    *data_reference
+                                )
+                            )
+                        elif drop_by == "null values":
+                            self.temp_datasets_state[dataset_name] = (
+                                self.temp_datasets_state[dataset_name].dropna(
+                                    subset=data_reference
+                                )
+                            )
+                        elif drop_by == "duplicates":
+                            self.temp_datasets_state[dataset_name] = (
+                                self.temp_datasets_state[dataset_name].dropDuplicates(
+                                    subset=data_reference
                                 )
                             )
                         if from_ui:
@@ -293,7 +386,7 @@ class PipelineUtils:
                             self.temp_datasets_state[
                                 dataset_name
                             ].createOrReplaceTempView(view_name)
-                            st.toast("Delete applied successfully!", icon="✅")
+                            st.toast("Drop applied successfully!", icon="✅")
                             time.sleep(0.3)
                     case "Explode":
                         column_name = data_map.get("new_column_name", "")
@@ -545,13 +638,12 @@ class PipelineUtils:
         return pipe_key, db_pipes
 
     def load_active_streams(self):
-        active_pipes = None
+        active_streams = {}
         db_active_pipe_streams = self.pipeline_db.db_active_pipe_streams
         if not list(db_active_pipe_streams.find()):
             db_active_pipe_streams.insert_one({"value": {}})
         for pipe in db_active_pipe_streams.find():
             # print("Active Pipeline:", pipe, flush=True)
-            active_pipes = pipe["value"]
-        return active_pipes
-    
-    
+            active_streams_key = pipe["_id"]
+            active_streams = pipe["value"]
+        return active_streams_key, db_active_pipe_streams, active_streams
