@@ -42,7 +42,7 @@ pipeline_selection = st.segmented_control(
 )
 pipeline = f"pipeline_{st.session_state.total_fusions+1}"
 
-col1, col2, col5, col4, col3 = st.columns([4, 2, 4, 12, 2], vertical_alignment="bottom")
+col1, col2, col3, col4 = st.columns([4, 2.1, 2, 10], vertical_alignment="bottom")
 with col2:
     if st.button("Save pipeline", disabled=pipeline_selection == "Load pipeline"):
         if st.session_state[f"{pipeline}"] != "":
@@ -93,12 +93,6 @@ with col1:
             placeholder="pipeline name",
         )
         pipelines = st.session_state.temp_pipelines
-
-with col5:
-    if st.button("Delete pipeline", disabled=pipeline_selection != "Load pipeline"):
-        del st.session_state.pipelines[pipeline]
-        st.toast("pipeline deleted successfully!", icon="✅")
-        time.sleep(0.2)
 
 with col3:
     if st.button("Add Layer", disabled=pipeline_selection == "Load pipeline"):

@@ -58,9 +58,6 @@ def save_input():
             "dataframe_name"
         ] = st.session_state.dataframe_name
 
-    if "Upload" not in st.session_state.temp_inputs["temp_input"]:
-        st.session_state.temp_inputs["temp_input"]["Upload"] = {}
-
 
 # sidebar, main = st.columns([2, 9], vertical_alignment="top")
 
@@ -104,7 +101,7 @@ with imports_col:
         )
         input_state = st.session_state.inputs
 
-    options = ["Link", "Stream", "Upload"]
+    options = ["Link", "Stream"]
     selection = st.segmented_control(
         "Data Source",
         options,
@@ -243,18 +240,10 @@ with imports_col:
             except Exception as e:
                 print(e, flush=True)
 
-    else:
-        uploaded_files = st.file_uploader(
-            "Choose a CSV file", accept_multiple_files=True
-        )
-        for uploaded_file in uploaded_files:
-            bytes_data = uploaded_file.read()
-            df = pd.read_csv(StringIO(bytes_data.decode("utf-8")))
-
     if (
         input_selection != "Create input source"
         and st.session_state.get("inputs")
-        and st.button("Import All")
+        and st.button("Import")
     ):
         print("Importing all data sources...", flush=True)
         st.session_state.temp_datasets = {}

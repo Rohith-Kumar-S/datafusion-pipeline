@@ -44,107 +44,26 @@ dtypes_map = {
 reverse_dtypes_map = {v: k for k, v in dtypes_map.items()}
 
 
-def update_drop_type(rule, selected_dataset, index, drop_by=None):
-    if drop_by == "--Select a drop type--":
-        return
-    if (
-        "drop_by"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "drop_by"
-        ] = drop_by
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "drop_by"
-        ]
-        != drop_by
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "drop_by"
-        ] = drop_by
-
-
-def update_column_name(rule, selected_dataset, index, new_column_name=None):
-    if (
-        "new_column_name"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "new_column_name"
-        ] = new_column_name
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "new_column_name"
-        ]
-        != new_column_name
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "new_column_name"
-        ] = new_column_name
-
-
-def update_data_source(rule, selected_dataset, index, source_reference=None, data_reference=None, operator=None, process=""):
+def update_data_source(rule, selected_dataset, index,  data_key=None, data_reference=None):
     if data_reference is not None and data_reference.startswith("--Select a"):
         return
     
     if (
-        "cast_from"
+        data_key
         not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
     ):
         st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_from"
-        ] = cast_from
-    
-    if data_reference is not None and (
-        "data_reference"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "data_reference"
+            data_key
         ] = data_reference
-    if operator is not None and (
-        "operator"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "operator"
-        ] = operator
-    if source_reference is not None and (
-        "source_reference"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "source_reference"
-        ] = source_reference
-    else:
-        if data_reference is not None and (
+    elif(
             st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "data_reference"
+               data_key
             ]
             != data_reference
         ):
             st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "data_reference"
+                data_key
             ] = data_reference
-        if operator is not None and (
-            st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "operator"
-            ]
-            != operator
-        ):
-           st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "operator"
-            ] = operator
-        if source_reference is not None and (
-            st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "source_reference"
-            ]
-            != source_reference
-        ):
-            st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-                "source_reference"
-            ] = source_reference
 
 def update_column_to_drop(rule, selected_dataset, index, data_reference=None):
     if "All" in data_reference and len(data_reference) != 1:
@@ -152,101 +71,6 @@ def update_column_to_drop(rule, selected_dataset, index, data_reference=None):
     st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
         "data_reference"
     ] = data_reference
-
-
-def update_new_dataset_name(rule, selected_dataset, index, new_dataset_name=None):
-    st.session_state.temp_rules[rule][selected_dataset][index].get(
-        "data_map", {}
-    ).update({"save_as": new_dataset_name})
-    if (
-        new_dataset_name not in st.session_state.fusion_dataset_names
-        and new_dataset_name != ""
-    ):
-        st.session_state.fusion_dataset_names.append(new_dataset_name)
-        if selected_dataset in st.session_state.part_of_stream:
-            st.session_state.part_of_stream.append(new_dataset_name)
-
-
-def update_column_to_cast(rule, selected_dataset, index, column_to_cast=None):
-    if column_to_cast == "--Select a column--":
-        return
-    if (
-        "column_to_cast"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "column_to_cast"
-        ] = column_to_cast
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "column_to_cast"
-        ]
-        != column_to_cast
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "column_to_cast"
-        ] = column_to_cast
-
-
-def update_cast_type(rule, selected_dataset, index, cast_type=None, process=""):
-    if cast_type == "--Select a cast type--":
-        return
-    if (
-        "cast_type"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_type"
-        ] = cast_type
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_type"
-        ]
-        != cast_type
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_type"
-        ] = cast_type
-
-def update_cast_from(rule, selected_dataset, index, cast_from=None, process=""):
-    if cast_from == "--Select a format--":
-        return
-    if (
-        "cast_from"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_from"
-        ] = cast_from
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_from"
-        ]
-        != cast_from
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_from"
-        ] = cast_from
-        
-def update_cast_to(rule, selected_dataset, index, cast_to=None, process=""):
-    if cast_to == "--Select a format--":
-        return
-    if (
-        "cast_to"
-        not in st.session_state.temp_rules[rule][selected_dataset][index]["data_map"]
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_to"
-        ] = cast_to
-    elif (
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_to"
-        ]
-        != cast_to
-    ):
-        st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
-            "cast_to"
-        ] = cast_to
 
 
 # d, b = st.columns([2, 8], vertical_alignment="bottom")
@@ -270,7 +94,7 @@ else:
             key="selected_dataset",
             help="Select a dataset to process.",
         )
-        options = ["View", "Describe", "Schema", "Transform"]
+        options = ["View", "Describe", "Schema"]
         selection = st.segmented_control(
             "Operations",
             options,
@@ -289,35 +113,40 @@ else:
         match selection:
             case "View":
                 st.session_state.views_query = f'SELECT * FROM {st.session_state.views[selected_dataset]["view_name"]}'
-                query = st.text_input(
+                c1, c2 = st.columns([9.8, 1.2], vertical_alignment="bottom")
+                query = c1.text_input(
                     "Query",
                     value=st.session_state.views_query,
                     placeholder=st.session_state.views_query,
                 )
+                c2.button("Run")
                 if query:
-                    df = st.session_state.spark.sql(query)
-                    rows = df.count()
-                    if rows > 10:
-                        try: 
-                            st.dataframe(
-                                df.limit(rows if rows < 60 else 60).toPandas(),
-                                height=350,
-                            )
-                        except Exception as e:
-                            st.warning("⚠️ Data cant be viewed")
-                    else:
-                        try:
-                            st.dataframe(df.limit(rows).toPandas())
-                        except Exception as e:
-                            for col, dtype in dict(df.dtypes).items():
-                                if dtype.startswith("struct") or dtype.startswith(
-                                    "array"
-                                ):
-                                    df = df.withColumn(
-                                        col, expr(f"cast({col} as string)")
-                                    )
-                            st.dataframe(df.limit(rows).toPandas())
-                    st.session_state.views_query = query
+                    try:
+                        df = st.session_state.spark.sql(query)
+                        rows = df.count()
+                        if rows > 10:
+                            try: 
+                                st.dataframe(
+                                    df.limit(rows if rows < 60 else 60).toPandas(),
+                                    height=350,
+                                )
+                            except Exception as e:
+                                st.warning("⚠️ Data cant be viewed")
+                        else:
+                            try:
+                                st.dataframe(df.limit(rows).toPandas())
+                            except Exception as e:
+                                for col, dtype in dict(df.dtypes).items():
+                                    if dtype.startswith("struct") or dtype.startswith(
+                                        "array"
+                                    ):
+                                        df = df.withColumn(
+                                            col, expr(f"cast({col} as string)")
+                                        )
+                                st.dataframe(df.limit(rows).toPandas())
+                        st.session_state.views_query = query
+                    except Exception as e:
+                        st.warning("⚠️ Data cant be viewed")
                 else:
                     st.dataframe(
                         st.session_state.temp_datasets[selected_dataset]
@@ -506,7 +335,8 @@ else:
                                         rule,
                                         selected_dataset,
                                         i,
-                                        source_reference=st.session_state.get(f"column_to_cast_{i}", ""),
+                                        data_reference=st.session_state.get(f"column_to_cast_{i}", ""),
+                                        data_key="column_to_cast",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -535,6 +365,7 @@ else:
                                         selected_dataset,
                                         i,
                                         data_reference=st.session_state.get(f"cast_type_{i}", ""),
+                                        data_key="cast_type",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -556,11 +387,12 @@ else:
                                     key=f"from_format_{i}",
                                     help="Select the format of the date to cast.",
                                     on_change=lambda i=i: (
-                                        update_cast_from(
+                                        update_data_source(
                                             rule,
                                             selected_dataset,
                                             i,
-                                            st.session_state.get(f"from_format_{i}", ""),
+                                            data_reference=st.session_state.get(f"from_format_{i}", ""),
+                                            data_key="cast_from"
                                         )
                                         if rule_selection != "Load rule"
                                         else None
@@ -579,11 +411,12 @@ else:
                                     key=f"to_format_{i}",
                                     help="Select the format to cast the date to.",
                                     on_change=lambda i=i: (
-                                        update_cast_to(
+                                        update_data_source(
                                             rule,
                                             selected_dataset,
                                             i,
-                                            st.session_state.get(f"to_format_{i}", ""),
+                                            data_reference=st.session_state.get(f"to_format_{i}", ""),
+                                            data_key="cast_to"
                                         )
                                         if rule_selection != "Load rule"
                                         else None
@@ -612,7 +445,8 @@ else:
                                         rule,
                                         selected_dataset,
                                         i,
-                                        source_reference=st.session_state.get(f"filter_column_{i}", "")
+                                        data_reference=st.session_state.get(f"filter_column_{i}", ""),
+                                        data_key="source_reference",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -646,7 +480,8 @@ else:
                                         rule,
                                         selected_dataset,
                                         i,
-                                        operator=st.session_state.get(f"filter_operator_{i}", "")
+                                        data_reference=st.session_state.get(f"filter_operator_{i}", ""),
+                                        data_key="operator"
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -666,7 +501,7 @@ else:
                                         selected_dataset,
                                         i,
                                         data_reference=st.session_state.get(f"filter_value_{i}", ""),
-                                        process="filter"
+                                        data_key="data_reference"
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -690,14 +525,15 @@ else:
                                 ),
                                 key=f"delete_type_{i}",
                                 on_change=lambda i=i: (
-                                    update_drop_type(
+                                    update_data_source(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        st.session_state.get(
+                                        data_reference=st.session_state.get(
                                             f"delete_type_{i}",
                                             "--Select a delete type--",
                                         ),
+                                        data_key="drop_by"
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -707,6 +543,10 @@ else:
                         with col2:
                             options = ["All"]
                             options.extend(dataset_columns[1:])
+                            options.extend(rules[rule][selected_dataset][i]["data_map"].get(
+                                        "data_reference", []
+                                    ))
+                            options = list(set(options))
                             st.multiselect(
                                 "Columns to drop",
                                 options=options,
@@ -723,7 +563,7 @@ else:
                                         i,
                                         data_reference=st.session_state.get(
                                             f"delete_data_{i}", []
-                                        ),
+                                        )
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -742,13 +582,14 @@ else:
                                 .get("data_map", {})
                                 .get("new_column_name", ""),
                                 on_change=lambda i=i: (
-                                    update_column_name(
+                                    update_data_source(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        new_column_name=st.session_state[
+                                        data_reference=st.session_state[
                                             f"explode_column_name_{i}"
                                         ],
+                                        data_key="new_column_name",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -770,6 +611,7 @@ else:
                                         data_reference=st.session_state[
                                             f"explode_column_{i}"
                                         ],
+                                        data_key="data_reference"
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -788,13 +630,14 @@ else:
                                 .get("data_map", {})
                                 .get("new_column_name", ""),
                                 on_change=lambda i=i: (
-                                    update_column_name(
+                                    update_data_source(
                                         rule,
                                         selected_dataset,
                                         i,
-                                        new_column_name=st.session_state[
+                                        data_reference=st.session_state[
                                             f"flatten_column_name_{i}"
                                         ],
+                                        data_key="new_column_name",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -816,6 +659,7 @@ else:
                                         data_reference=st.session_state.get(
                                             f"flatten_column_{i}", ""
                                         ),
+                                        data_key="data_reference",
                                     )
                                     if rule_selection != "Load rule"
                                     else None
@@ -833,13 +677,14 @@ else:
                             .get("data_map", {})
                             .get("save_as", ""),
                             on_change=lambda i=i: (
-                                update_new_dataset_name(
+                                update_data_source(
                                     rule,
                                     selected_dataset,
                                     i,
-                                    new_dataset_name=st.session_state[
+                                    data_reference=st.session_state[
                                         f"save_file_name_{i}"
                                     ],
+                                    data_key="save_as"
                                 )
                                 if rule_selection != "Load rule"
                                 else None

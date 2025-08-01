@@ -60,7 +60,7 @@ else:
     )
     fusion = f"fusion_{st.session_state.total_fusions+1}"
 
-    col1, col2, col4, col3 = st.columns([4, 2, 12, 2], vertical_alignment="bottom")
+    col1, col2, col3, col4 = st.columns([4, 2, 2, 10], vertical_alignment="bottom")
     with col2:
         if st.button("Save fusion", disabled=fusion_selection == "Load fusion"):
             if st.session_state[f"{fusion}"] != "":
