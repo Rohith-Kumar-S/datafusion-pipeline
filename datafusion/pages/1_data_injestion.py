@@ -155,7 +155,7 @@ with imports_col:
                 index=stream_from_options.index(
                     input_state[input_name]
                     .get("Stream", {})
-                    .get("stream_from", "kafka")
+                    .get("stream_from", "")
                 ),
                 disabled=True,
                 label_visibility="collapsed",
@@ -167,8 +167,7 @@ with imports_col:
                 key="server_spec",
                 value=input_state[input_name]
                 .get("Stream", {})
-                .get("server_spec", "rk-kafka:29093"),
-                placeholder="rk-kafka:29093",
+                .get("server_spec", ""),
             )
         with col3:
             st.text_input(
@@ -176,8 +175,7 @@ with imports_col:
                 key="topic_to_subscribe",
                 value=input_state[input_name]
                 .get("Stream", {})
-                .get("topic_to_subscribe", "iot-device-data"),
-                placeholder="iot-device-data",
+                .get("topic_to_subscribe", ""),
             )
         with col4:
             st.selectbox(
@@ -202,16 +200,14 @@ with imports_col:
                 .get(
                     "schema_skeleton",
                     '{"device_id": "string", "temperature": "float", "humidity": "float"}',
-                ),
-                placeholder='{"device_id": "string", "temperature": "float", "humidity": "float"}',
+                )
             )
         st.text_input(
             "Imported data name",
             key="dataframe_name",
             value=input_state[input_name]
             .get("Stream", {})
-            .get("dataframe_name", "iot_device_data"),
-            placeholder="iot_device_data.csv",
+            .get("dataframe_name", "")
         )
         if input_selection == "Create input source" and st.button("Import"):
 

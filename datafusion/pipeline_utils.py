@@ -154,13 +154,17 @@ class PipelineUtils:
 
     def import_data(self, value, import_type, from_ui=True):
         dataframe_names = []
+        query_params = []
         if import_type == "Link":
             urls = re.findall(r"https?://[^\s]+|http?://[^\s]+", value)
             for url in urls:
                 if url == "":
                     continue
-                self.detect_source_type(url)
-            for dataset_name, dataset_path in self.datasetpath_state.items():
+                url_split = url.split("?")
+                if len(url_split) > 1:  # Remove query parameters if any
+                    query_params.append(url_split[1].split("sep=") if 'sep=' in url_split[1] else "")
+                self.detect_source_type(url_split[0])
+            for i, (dataset_name, dataset_path) in enumerate(self.datasetpath_state.items()):
                 if dataset_path is None:
                     print(f"Dataset {dataset_name} could not be imported.")
                 else:
@@ -168,7 +172,15 @@ class PipelineUtils:
                     data = None
                     if dataset_path.endswith(".csv"):
                         data = self.spark_session_state.read.csv(
-                            dataset_path, header=True, inferSchema=True, nullValue="NA"
+                            dataset_path, header=True, inferSchema=True
+                        )
+                    elif dataset_path.endswith(".txt") and query_params[i]!= "":
+                        data = (
+                            self.spark_session_state.read
+                                .option("header", "true")
+                                .option("inferSchema", "true")
+                                .option("delimiter", query_params[i])
+                                .csv(dataset_path)
                         )
 
                     self.update_data_state_variables(
@@ -218,6 +230,183 @@ class PipelineUtils:
 
     def reset_views(self, dataset_name):
         self.temp_datasets_state[dataset_name] = self.datasets_state[dataset_name]
+
+    def apply_condition(self, dataset_name, filter_source, filter_operator, filter_value, operation = 'filter',value_to_set=None, column_name=None):
+        if column_name in self.temp_datasets_state[dataset_name].columns:
+            fallback = F.col(column_name)
+        else:
+            fallback = F.lit(None)
+        match filter_operator:
+            case "==":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) == filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(
+                        column_name,
+                        F.when(F.col(filter_source) == filter_value, value_to_set).otherwise(fallback)
+                    )
+            case "!=":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) != filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = self.temp_datasets_state[dataset_name].withColumn(
+                        column_name,
+                        F.when(F.col(filter_source) != filter_value, value_to_set).otherwise(fallback)
+                    )
+            case "<":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) < filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) < filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case "<=":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) <= filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) <= filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case ">":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) > filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) > filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case ">":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) >= filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) >= filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case ">":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) > filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) > filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case ">=":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source) >= filter_value
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source) >= filter_value, value_to_set).otherwise(fallback)
+                        )
+                    )
+            case "contains":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source).contains(filter_value)
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source).contains(filter_value), value_to_set).otherwise(fallback)
+                        )
+                    )
+            case "startswith":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source).startswith(filter_value)
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source).startswith(filter_value), value_to_set).otherwise(fallback)
+                        )
+                    )
+            case "endswith":
+                if operation == 'filter':
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .filter(
+                            F.col(filter_source).endswith(filter_value)
+                        )
+                    )
+                else:
+                    self.temp_datasets_state[dataset_name] = (
+                        self.temp_datasets_state[dataset_name]
+                        .withColumn(
+                            column_name,
+                            F.when(F.col(filter_source).endswith(filter_value), value_to_set).otherwise(fallback)
+                        )
+                    )
 
     def test_rule(self, rule, from_ui=True):
         for dataset_name, processes in rule.items():
@@ -280,75 +469,31 @@ class PipelineUtils:
                                     "Column to cast and cast type cannot be empty.",
                                     flush=True,
                                 )
+                    case "Rename":
+                        old_column_name = data_map.get("source_reference", None)
+                        new_column_name = data_map.get("data_reference", None)
+                        if old_column_name and new_column_name:
+                            self.temp_datasets_state[dataset_name] = (
+                                self.temp_datasets_state[dataset_name]
+                                .withColumnRenamed(old_column_name, new_column_name)
+                            )
+                            if from_ui:
+                                view_name = self.views_state[dataset_name][
+                                    "view_name"
+                                ]
+                                self.temp_datasets_state[
+                                    dataset_name
+                                ].createOrReplaceTempView(view_name)
+                                st.toast("Rename applied successfully!", icon="✅")
+                                time.sleep(0.3)
                     case "Filter":
                         filter_source = data_map.get("source_reference", None)
                         filter_value = data_map.get("data_reference", None)
                         filter_operator = data_map.get("operator", None)
                         if filter_source and filter_value and filter_operator:
-                            match filter_operator:
-                                case "==":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) == filter_value
-                                        )
-                                    )
-                                case "!=":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) != filter_value
-                                        )
-                                    )
-                                case "<":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) < filter_value
-                                        )
-                                    )
-                                case "<=":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) <= filter_value
-                                        )
-                                    )
-                                case ">":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) > filter_value
-                                        )
-                                    )
-                                case ">=":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source) >= filter_value
-                                        )
-                                    )
-                                case "contains":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source).contains(filter_value)
-                                    )
-                                )
-                                case "startswith":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source).startswith(filter_value)
-                                        )
-                                    )
-                                case "endswith":
-                                    self.temp_datasets_state[dataset_name] = (
-                                        self.temp_datasets_state[dataset_name]
-                                        .filter(
-                                            F.col(filter_source).endswith(filter_value)
-                                        )
-                                    )
+                            self.apply_condition(
+                                dataset_name, filter_source, filter_operator, filter_value
+                            )
                             if from_ui:
                                 view_name = self.views_state[dataset_name]["view_name"]
                                 self.temp_datasets_state[
@@ -387,6 +532,56 @@ class PipelineUtils:
                                 dataset_name
                             ].createOrReplaceTempView(view_name)
                             st.toast("Drop applied successfully!", icon="✅")
+                            time.sleep(0.3)
+                    case "Fill":
+                        failed = False
+                        fill_by = data_map.get("fill_by", "")
+                        data_reference = data_map.get("data_reference", None)
+                        if fill_by == "column":
+                            if data_map.get("apply_filter", False):
+                                filter_source = data_map.get("fill_filter_source_reference", None)
+                                filter_value = data_map.get("fill_filter_data_reference", None)
+                                filter_operator = data_map.get("operator", None)
+                                column_name = data_map.get("column_name", None)
+                                if filter_source and filter_value and filter_operator and data_reference and column_name:
+                                    self.apply_condition(dataset_name, filter_source, filter_operator, filter_value, operation='fill', value_to_set=data_reference, column_name=column_name)
+                                else:
+                                    if from_ui:
+                                        failed = True
+                                        st.toast("Filter properties missing for Fill operation", icon="❗")
+                            else:
+                                column_name = data_map.get("column_name", None)
+                                if data_reference and column_name:
+                                    self.temp_datasets_state[dataset_name] = (
+                                        self.temp_datasets_state[dataset_name]
+                                        .withColumn(
+                                            column_name, F.lit(data_reference)
+                                        )
+                                    )
+                        elif fill_by == "null values":
+                            if data_reference is not None:
+                                self.temp_datasets_state[dataset_name] = (
+                                    self.temp_datasets_state[dataset_name].fillna(
+                                        subset=[data_reference]
+                                    )
+                                )
+                            else:
+                                if from_ui:
+                                    st.toast(
+                                        "Data reference missing for Fill operation",
+                                        icon="❗",
+                                    )
+                                    failed = True
+                        if from_ui and not failed:
+                            view_name = self.views_state[dataset_name][
+                                "view_name"
+                            ]
+                            self.temp_datasets_state[
+                                dataset_name
+                            ].createOrReplaceTempView(view_name)
+                            st.toast(
+                                "Fill applied successfully!", icon="✅"
+                            )
                             time.sleep(0.3)
                     case "Explode":
                         column_name = data_map.get("new_column_name", "")
