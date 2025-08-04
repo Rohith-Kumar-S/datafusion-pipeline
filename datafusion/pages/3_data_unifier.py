@@ -13,7 +13,7 @@ pipeline_utils = PipelineUtils(temp_datasets_state=st.session_state.temp_dataset
 
 def add_process(fusion):
     st.session_state.temp_fusions[fusion].append(
-        {"datasets_to_fuse": [], "fuse_by": ""}
+        {"datasets_to_fuse": []}
     )
 
 def update_datasets_to_fuse(i, datasets_to_fuse):
@@ -21,11 +21,15 @@ def update_datasets_to_fuse(i, datasets_to_fuse):
 
 
 def update_fuse_how(i, option):
-    st.session_state.temp_fusions[fusion][i]["fuse_how"] = option
+    if option != "--Select an option--":
+        st.session_state.temp_fusions[fusion][i]["fuse_how"] = option
 
 
 def get_new_dataset_name(datasets_to_fuse):
     return "_".join([dataset.split(".")[0] for dataset in datasets_to_fuse])
+
+def update_fuse_on(i, option):
+    st.session_state.temp_fusions[fusion][i]["fuse_on"] = option
 
 def update_fuse_by(i, option):
     if option != "--Select an option--":
@@ -145,10 +149,14 @@ else:
 
         for i, process in enumerate(fusions[fusion]):
             col1, col2, col3 = st.columns([4, 3, 1], vertical_alignment="bottom")
+            options = list(st.session_state.temp_datasets.keys())
+            options.extend(st.session_state.fusion_dataset_names)
+            options.extend(fusions[fusion][i].get("datasets_to_fuse", []))
+            options = list(set(options))
             datasets_to_fuse = col1.multiselect(
                 "Datasets to fuse",
-                options=list(st.session_state.temp_datasets.keys()),
-                default=fusions[fusion][i]["datasets_to_fuse"],
+                options=options,
+                default=fusions[fusion][i].get("datasets_to_fuse", []),
                 key=f"datasets_to_fuse_{i}",
                 help="Select datasets to fuse.",
                 on_change=lambda: update_datasets_to_fuse(
@@ -180,42 +188,47 @@ else:
                     disabled=fusion_selection == "Load fusion",
                     on_click=lambda p=process: fusions[fusion].remove(p),
                 )
-            col1, col2 = st.columns([2, 13])
+            col1, col2, col3 = st.columns([2, 2, 11])
             if len(datasets_to_fuse) > 1:
-                options = ['--Select an option--']
-                options.extend(pipeline_utils.get_fusable_columns(datasets_to_fuse))
-                if fusion_selection != "Load fusion":
-                    update_fuse_by(
-                        i, options[0] if options else "No common columns"
-                    )
-                with col2:
-                    st.selectbox(
-                        "Fusable by",
-                        options=options,
-                        key=f"fusable_by_{i}",
-                        index=options.index(fusions[fusion][i].get("fuse_by", "--Select an option--")),
-                        help="Select columns to fuse.",
-                        on_change=lambda: update_fuse_by(
-                            i, st.session_state[f"fusable_by_{i}"]
-                        ),
-                        disabled=fusion_selection == "Load fusion",
-                    )
-                options = ["inner", "left", "right", "outer"]
-                if "fuse_how" not in fusions[fusion][i]:
-                    fusions[fusion][i]["fuse_how"] = options[0]
+                options = ["--Select an option--", "row", "column"]
                 with col1:
-                    option = st.selectbox(
-                        label="Fuse how",
+                    fuse_by = st.selectbox(
+                        label="Fuse by",
                         options=options,
-                        index=options.index(fusions[fusion][i]["fuse_how"]),
-                        key=f"fuse_how_{i}",
-                        on_change=lambda: update_fuse_how(
-                            i, st.session_state[f"fuse_how_{i}"]
+                        index=options.index(fusions[fusion][i].get("fuse_by", options[0])),
+                        key=f"fuse_by_{i}",
+                        on_change=lambda: update_fuse_by(
+                            i, st.session_state[f"fuse_by_{i}"]
                         ),
-                        disabled=fusion_selection == "Load fusion",
                         help="Select how to fuse the datasets.",
                     )
+                if fuse_by == "column":
+                    with col3:
+                        st.text_input(
+                            "Fuse on",
+                            value=fusions[fusion][i].get("fuse_on", ""),
+                            key=f"fuse_on_{i}",
+                            on_change=lambda: update_fuse_on(
+                                i, st.session_state[f"fuse_on_{i}"]
+                            ),
+                            help="Select columns to fuse.",
+                        )
+
+                    options = ['--Select an option--', "inner", "left", "right", "outer"]
+                    with col2:
+                        option = st.selectbox(
+                            label="Fuse how",
+                            options=options,
+                            index=options.index(fusions[fusion][i].get("fuse_how", options[0])),
+                            key=f"fuse_how_{i}",
+                            on_change=lambda: update_fuse_how(
+                                i, st.session_state[f"fuse_how_{i}"]
+                            ),
+                            disabled=fusion_selection == "Load fusion",
+                            help="Select how to fuse the datasets.",
+                        )
             st.write("---")
+                    
 
 # with a:
 #     st.write(st.session_state.temp_fusions)

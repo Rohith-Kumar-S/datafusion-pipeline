@@ -134,6 +134,9 @@ if  "active_streams_key" not in st.session_state:
 
 if "db_active_pipe_streams" not in st.session_state:
     st.session_state.db_active_pipe_streams = None
+    
+if "new_columns" not in st.session_state:
+    st.session_state.new_columns = {}
 
 # # Initialize Spark
 @st.cache_resource

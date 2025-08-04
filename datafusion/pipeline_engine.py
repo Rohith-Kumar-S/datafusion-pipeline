@@ -63,8 +63,6 @@ class Pipeline:
                     pipeline_utils.import_data(layer["layer_selection"]["Link"]["source_links"], "Link", from_ui=False)
                 if layer["layer_selection"]["Stream"]:
                     pipeline_utils.import_data(layer["layer_selection"]["Stream"], "Stream", from_ui=False)
-                if layer["layer_selection"]["Upload"]:
-                    pass
                 print(f"Source layer executed successfully with datasets", flush=True)
             elif layer["layer_type"] == "Processor":
                 print(f"Executing Processor layer", flush=True)
@@ -80,7 +78,8 @@ class Pipeline:
                 pipeline_utils.fuse_datasets(layer["layer_selection"][0]["fused_dataset_name"],
                                     layer["layer_selection"][0]["datasets_to_fuse"],
                                     layer["layer_selection"][0]["fuse_by"],
-                                    layer["layer_selection"][0]["fuse_how"])
+                                    layer["layer_selection"][0].get("fuse_on", None),
+                                    layer["layer_selection"][0].get("fuse_how", None))
                 print(f"Fusion layer executed successfully with datasets", flush=True)
             elif layer["layer_type"] == "Target":
                 print(f"Executing Target layer", flush=True)

@@ -66,6 +66,8 @@ def generate_pipeline_data(selected_pipeline):
             layer["layer_selection"] = pipeline_utils.get_fusions()[layer["layer_selection"]]
         elif layer["layer_type"] == "Target":
             pipeline_utils.load_targets(input_selected, read_only=True)
+            print("targets:", pipeline_utils.get_targets(), flush=True)
+            print("layer_selection:", layer["layer_selection"], flush=True)
             layer["layer_selection"] = pipeline_utils.get_targets()[layer["layer_selection"]]
             part_of_stream = layer["layer_selection"].get("part_of_stream", [])
             if part_of_stream:

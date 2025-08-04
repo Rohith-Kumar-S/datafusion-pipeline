@@ -48,7 +48,7 @@ class PipelineUtils:
         self.rules = None
         self.fusions = None
         self.targets = None
-        self.pipelines = None
+        self.pipelines = {}
 
     def get_datasets_state(self):
         """Return the current state of datasets."""
@@ -157,12 +157,15 @@ class PipelineUtils:
         query_params = []
         if import_type == "Link":
             urls = re.findall(r"https?://[^\s]+|http?://[^\s]+", value)
+            print(len(urls), "urls found", flush=True)
             for url in urls:
                 if url == "":
                     continue
                 url_split = url.split("?")
                 if len(url_split) > 1:  # Remove query parameters if any
-                    query_params.append(url_split[1].split("sep=") if 'sep=' in url_split[1] else "")
+                    query_params.append(url_split[1].split("sep=")[1] if 'sep=' in url_split[1] else "")
+                else:
+                    query_params.append("")
                 self.detect_source_type(url_split[0])
             for i, (dataset_name, dataset_path) in enumerate(self.datasetpath_state.items()):
                 if dataset_path is None:
@@ -172,17 +175,15 @@ class PipelineUtils:
                     data = None
                     if dataset_path.endswith(".csv"):
                         data = self.spark_session_state.read.csv(
-                            dataset_path, header=True, inferSchema=True
+                            dataset_path, header=True
                         )
                     elif dataset_path.endswith(".txt") and query_params[i]!= "":
                         data = (
                             self.spark_session_state.read
                                 .option("header", "true")
-                                .option("inferSchema", "true")
-                                .option("delimiter", query_params[i])
+                                .option("delimiter", query_params[i].encode().decode("unicode_escape"))
                                 .csv(dataset_path)
                         )
-
                     self.update_data_state_variables(
                         dataset_name.split(".")[0], data, from_ui
                     )
@@ -537,12 +538,12 @@ class PipelineUtils:
                         failed = False
                         fill_by = data_map.get("fill_by", "")
                         data_reference = data_map.get("data_reference", None)
+                        column_name = data_map.get("column_name", None)
                         if fill_by == "column":
                             if data_map.get("apply_filter", False):
                                 filter_source = data_map.get("fill_filter_source_reference", None)
                                 filter_value = data_map.get("fill_filter_data_reference", None)
                                 filter_operator = data_map.get("operator", None)
-                                column_name = data_map.get("column_name", None)
                                 if filter_source and filter_value and filter_operator and data_reference and column_name:
                                     self.apply_condition(dataset_name, filter_source, filter_operator, filter_value, operation='fill', value_to_set=data_reference, column_name=column_name)
                                 else:
@@ -559,19 +560,27 @@ class PipelineUtils:
                                         )
                                     )
                         elif fill_by == "null values":
+                            fill_condition = data_map.get("fill_condition", None)
+                            value = None
+                            if fill_condition == 'mean':
+                                value = self.temp_datasets_state[dataset_name].select(F.avg(column_name)).first()[0]
+                            elif fill_condition == 'median':
+                                value = self.temp_datasets_state[dataset_name].select(F.expr(f"percentile_approx({column_name}, 0.5)")).first()[0]
+                            elif fill_condition == 'standard deviation':
+                                value = self.temp_datasets_state[dataset_name].select(F.stddev(column_name)).first()[0]
                             if data_reference is not None:
-                                self.temp_datasets_state[dataset_name] = (
-                                    self.temp_datasets_state[dataset_name].fillna(
-                                        subset=[data_reference]
-                                    )
+                                value = data_reference
+                            self.temp_datasets_state[dataset_name] = (
+                                self.temp_datasets_state[dataset_name].fillna({
+                                    column_name: value
+                                })
+                            )
+                            if from_ui and not value:
+                                st.toast(
+                                    "Fill operation failed, please check the fill condition.",
+                                    icon="❗",
                                 )
-                            else:
-                                if from_ui:
-                                    st.toast(
-                                        "Data reference missing for Fill operation",
-                                        icon="❗",
-                                    )
-                                    failed = True
+                                failed = True
                         if from_ui and not failed:
                             view_name = self.views_state[dataset_name][
                                 "view_name"
@@ -661,13 +670,23 @@ class PipelineUtils:
         return fusable_columns
 
     def fuse_datasets(
-        self, fusion_name, datasets_to_fuse, fuse_by=None, fuse_how="inner"
+        self, fusion_name, datasets_to_fuse, fuse_by=None, fuse_on=None, fuse_how="inner"
     ):
+        print(
+            f"Fusion dataset: {fusion_name} with datasets: {datasets_to_fuse} by {fuse_by} on {fuse_on} with how {fuse_how}",
+            flush=True,
+        )
+        print("Available datasets:", self.temp_datasets_state.keys(), flush=True)
         dataset_1 = self.temp_datasets_state[datasets_to_fuse[0]]
         for dataset in datasets_to_fuse[1:]:
-            dataset_1 = dataset_1.join(
-                self.temp_datasets_state[dataset], on=fuse_by, how=fuse_how
-            )
+            if fuse_by == 'column':
+                dataset_1 = dataset_1.join(
+                    self.temp_datasets_state[dataset], on=fuse_on, how=fuse_how
+                )
+            else:
+                dataset_1 = dataset_1.union(
+                    self.temp_datasets_state[dataset]
+                )
         self.temp_datasets_state[fusion_name] = dataset_1
 
     def export_datasets(self, export_data):

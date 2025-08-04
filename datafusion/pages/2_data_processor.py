@@ -64,12 +64,28 @@ def update_data_source(rule, selected_dataset, index,  data_key=None, data_refer
             st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
                 data_key
             ] = data_reference
+    
+    if data_key == "save_as":
+        st.session_state.fusion_dataset_names.append(
+            data_reference
+        )
+    if rule not in st.session_state.new_columns:
+        st.session_state.new_columns[rule] = {}
+    if selected_dataset not in st.session_state.new_columns[rule]:
+        st.session_state.new_columns[rule][selected_dataset] = []
+    if data_key == "new_column_name":
+        st.session_state.new_columns[rule][selected_dataset].append(data_reference)
 
 def update_column_to_drop(rule, selected_dataset, index, data_reference=None):
     if "All" in data_reference and len(data_reference) != 1:
         data_reference.remove("All")
     st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
         "data_reference"
+    ] = data_reference
+    
+def update_column_to_filter(rule, selected_dataset, index, data_reference=None):
+    st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][
+        "columns_to_filter"
     ] = data_reference
 
 
@@ -131,7 +147,7 @@ else:
                                     height=350,
                                 )
                             except Exception as e:
-                                st.warning("⚠️ Data cant be viewed")
+                                st.warning(f"⚠️ Dataa cant be viewed: {e}", icon="⚠️")
                         else:
                             try:
                                 st.dataframe(df.limit(rows).toPandas())
@@ -146,7 +162,7 @@ else:
                                 st.dataframe(df.limit(rows).toPandas())
                         st.session_state.views_query = query
                     except Exception as e:
-                        st.warning("⚠️ Data cant be viewed")
+                        st.warning(f"⚠️ Data cant be viewed: {e}", icon="⚠️")
                 else:
                     st.dataframe(
                         st.session_state.temp_datasets[selected_dataset]
@@ -216,8 +232,14 @@ else:
                         for db_rule in db_rules.find({"input_source": st.session_state.input_loaded}):
                             print("Rule Source:", db_rule, flush=True)
                             st.session_state.rules = db_rule["value"]
-                    st.toast("Rule created successfully!", icon="✅")
-                    time.sleep(0.2)
+                        st.toast("Rule created successfully!", icon="✅")
+                        time.sleep(0.2)
+                    else:
+                        st.toast(
+                            "Rule name already exists. Please choose a different name.",
+                            icon="❌",
+                        )
+                        time.sleep(0.2)
                 else:
                     st.toast("Rule name can't be empty.", icon="❌")
                     time.sleep(0.2)
@@ -472,7 +494,7 @@ else:
                                     if rule_selection != "Load rule"
                                     else None
                                 ),
-                                help="Select a column to explode.",
+                                help="Select a column to Rename.",
                             )
                     case "Filter":
                         st.session_state.cast = {}
@@ -545,7 +567,7 @@ else:
                                 "Value",
                                 value=rules[rule][selected_dataset][i]
                                 .get("data_map", {})
-                                .get("filter_value", ""),
+                                .get("data_reference", ""),
                                 key=f"filter_value_{i}",
                                 on_change=lambda i=i: (
                                     update_data_source(
@@ -598,6 +620,7 @@ else:
                             options.extend(rules[rule][selected_dataset][i]["data_map"].get(
                                         "data_reference", []
                                     ))
+                            options.extend(st.session_state.new_columns.get(rule, {}).get(selected_dataset, []))
                             options = list(set(options))
                             st.multiselect(
                                 "Columns to drop",
@@ -654,24 +677,44 @@ else:
                                 help="Select fill type.",
                             )
                         with col2:
-                            apply_filter = st.radio("Apply Condition", options=["Apply Condition"], 
-                                index=0 if rules[rule][selected_dataset][i]["data_map"].get(
-                                        "apply_filter", None
-                                    ) else None, key=f"apply_filter_{i}",
-                                help="Select whether to apply a filter to the column.",
-                                label_visibility="collapsed",
-                                on_change=lambda i=i: (
-                                    update_data_source(
-                                        rule,
-                                        selected_dataset,
-                                        i,
-                                        data_reference=st.session_state.get(f"apply_filter_{i}", ""),
-                                        data_key="apply_filter"
-                                    )
-                                    if rule_selection != "Load rule"
-                                    else None
-                                ),
-                            )
+                            if rules[rule][selected_dataset][i]["data_map"].get(
+                                        "fill_by", "--Select a fill type--"
+                                    ) == 'column':
+                                apply_filter = st.radio("Apply Condition", options=["Apply Condition"], 
+                                    index=0 if rules[rule][selected_dataset][i]["data_map"].get(
+                                            "apply_filter", None
+                                        ) else None, key=f"apply_filter_{i}",
+                                    help="Select whether to apply a filter to the column.",
+                                    label_visibility="collapsed",
+                                    on_change=lambda i=i: (
+                                        update_data_source(
+                                            rule,
+                                            selected_dataset,
+                                            i,
+                                            data_reference=st.session_state.get(f"apply_filter_{i}", ""),
+                                            data_key="apply_filter"
+                                        )
+                                        if rule_selection != "Load rule"
+                                        else None
+                                    ),
+                                )
+                            elif rules[rule][selected_dataset][i]["data_map"].get(
+                                        "fill_by", "--Select a fill type--"
+                                    ) == 'null values':
+                                options = ["--Select a fill condition--","mean", "median","standard deviation", "custom"]
+                                st.selectbox("Fill condition", options=options, index=options.index(rules[rule][selected_dataset][i]["data_map"].get(
+                                            "fill_condition", "--Select a fill condition--"
+                                        )), key=f"fill_condition_{i}", on_change=lambda i=i: (
+                                            update_data_source(
+                                                rule,
+                                                selected_dataset,
+                                                i,
+                                                data_reference=st.session_state.get(f"fill_condition_{i}", ""),
+                                                data_key="fill_condition"
+                                            )
+                                            if rule_selection != "Load rule"
+                                            else None
+                                        ))
                         if rules[rule][selected_dataset][i]["data_map"].get(
                                         "apply_filter", None
                                     ):
@@ -756,54 +799,54 @@ else:
                                     ),
                                     help="Enter a value to filter the column.",
                                 )
-                        if rules[rule][selected_dataset][i]["data_map"].get(
-                                        "fill_by", "--Select a fill type--"
-                                    ) == "column":
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.text_input(
-                                    "Column Name",
-                                    key=f"fill_column_name_{i}",
-                                    value=rules[rule][selected_dataset][i]
-                                    .get("data_map", {})
-                                    .get("column_name", ""),
-                                    on_change=lambda i=i: (
-                                        update_data_source(
-                                            rule,
-                                            selected_dataset,
-                                            i,
-                                            data_reference=st.session_state[
-                                                f"fill_column_name_{i}"
-                                            ],
-                                            data_key="column_name",
-                                        )
-                                        if rule_selection != "Load rule"
-                                        else None
-                                    ),
-                                    help="Enter a name for the new column created by exploding the selected column.",
-                                )
-                            with col2:
-                                st.text_input(
-                                    "Value to fill",
-                                    value=rules[rule][selected_dataset][i]
-                                    .get("data_map", {})
-                                    .get("data_reference", ""),
-                                    key=f"fill_column_{i}",
-                                    on_change=lambda i=i: (
-                                        update_data_source(
-                                            rule,
-                                            selected_dataset,
-                                            i,
-                                            data_reference=st.session_state[
-                                                f"fill_column_{i}"
-                                            ],
-                                            data_key="data_reference"
-                                        )
-                                        if rule_selection != "Load rule"
-                                        else None
-                                    ),
-                                    help="Select a column to fill.",
-                                )
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.text_input(
+                                "Column Name",
+                                key=f"fill_column_name_{i}",
+                                value=rules[rule][selected_dataset][i]
+                                .get("data_map", {})
+                                .get("column_name", ""),
+                                on_change=lambda i=i: (
+                                    update_data_source(
+                                        rule,
+                                        selected_dataset,
+                                        i,
+                                        data_reference=st.session_state[
+                                            f"fill_column_name_{i}"
+                                        ],
+                                        data_key="column_name",
+                                    )
+                                    if rule_selection != "Load rule"
+                                    else None
+                                ),
+                                help="Enter a name for the new column created by exploding the selected column.",
+                            )
+                        with col2:
+                            st.text_input(
+                                "Value to fill",
+                                value=rules[rule][selected_dataset][i]
+                                .get("data_map", {})
+                                .get("data_reference", ""),
+                                key=f"fill_column_{i}",
+                                disabled= rules[rule][selected_dataset][i]["data_map"].get(
+                                        "fill_condition", "custom"
+                                    ) != "custom",
+                                on_change=lambda i=i: (
+                                    update_data_source(
+                                        rule,
+                                        selected_dataset,
+                                        i,
+                                        data_reference=st.session_state[
+                                            f"fill_column_{i}"
+                                        ],
+                                        data_key="data_reference"
+                                    )
+                                    if rule_selection != "Load rule"
+                                    else None
+                                ),
+                                help="Select a column to fill.",
+                            )
                     case "Explode":
                         st.session_state.cast = {}
                         rules[rule][selected_dataset][i]["operation"] = "Explode"

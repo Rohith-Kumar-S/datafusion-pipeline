@@ -62,6 +62,12 @@ with col2:
                     st.session_state.pipelines = pipe["value"]
                 st.toast("pipeline created successfully!", icon="✅")
                 time.sleep(0.2)
+            else:
+                st.toast(
+                    "Pipeline name already exists. Please choose a different name.",
+                    icon="❌",
+                )
+                time.sleep(0.2)
         else:
             st.toast("pipeline name can't be empty.", icon="❌")
             time.sleep(0.2)

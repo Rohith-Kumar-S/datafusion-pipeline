@@ -155,7 +155,7 @@ with imports_col:
                 index=stream_from_options.index(
                     input_state[input_name]
                     .get("Stream", {})
-                    .get("stream_from", "")
+                    .get("stream_from", "kafka")
                 ),
                 disabled=True,
                 label_visibility="collapsed",
@@ -199,8 +199,9 @@ with imports_col:
                 .get("Stream", {})
                 .get(
                     "schema_skeleton",
-                    '{"device_id": "string", "temperature": "float", "humidity": "float"}',
-                )
+                    '',
+                ),
+                placeholder='{"device_id": "string", "temperature": "float", "humidity": "float"}',
             )
         st.text_input(
             "Imported data name",
@@ -239,7 +240,7 @@ with imports_col:
     if (
         input_selection != "Create input source"
         and st.session_state.get("inputs")
-        and st.button("Import")
+        and st.button("Import All")
     ):
         print("Importing all data sources...", flush=True)
         st.session_state.temp_datasets = {}
@@ -281,8 +282,13 @@ with imports_col:
             if pipeline_utils.import_data(value, "Stream", from_ui=True):
                 st.session_state.dataframe = value
                 st.session_state.imported_data.append(
-                    [st.session_state.dataframe_name, "Stream"]
+                    [value["dataframe_name"], "Stream"]
                 )
+            if value["dataframe_name"] not in st.session_state.part_of_stream:
+                st.session_state.part_of_stream.append(
+                    value["dataframe_name"]
+                )
+            print('Part of Stream:', st.session_state.part_of_stream, flush=True)
         except Exception as e:
             print(e, flush=True)
         save_input()
