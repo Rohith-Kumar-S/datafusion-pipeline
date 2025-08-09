@@ -234,10 +234,6 @@ The project includes sample IoT datasets for testing:
 4. Push to the branch (`git push origin feature/new-feature`)
 5. Create a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 🔧 Technologies Used
 
 - **Backend**: Apache Spark (PySpark), Python 3.8+
