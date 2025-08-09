@@ -22,6 +22,7 @@ def add_to_conversion(target_name, dataset, format_key):
 
 
 def save_target():
+    """Save the target configuration."""
     if st.session_state["target_name"] != "":
         temp = st.session_state.temp_targets[target_name]
         new_target_name = st.session_state["target_name"]

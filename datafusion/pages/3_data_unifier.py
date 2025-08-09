@@ -12,31 +12,38 @@ pipeline_utils = PipelineUtils(temp_datasets_state=st.session_state.temp_dataset
 
 
 def add_process(fusion):
+    """Add a new process to the fusion."""
     st.session_state.temp_fusions[fusion].append(
         {"datasets_to_fuse": []}
     )
 
 def update_datasets_to_fuse(i, datasets_to_fuse):
+    """Update the datasets to fuse for a specific process."""
     st.session_state.temp_fusions[fusion][i]["datasets_to_fuse"] = datasets_to_fuse
 
 
 def update_fuse_how(i, option):
+    """Update the fuse how for a specific process."""
     if option != "--Select an option--":
         st.session_state.temp_fusions[fusion][i]["fuse_how"] = option
 
 
 def get_new_dataset_name(datasets_to_fuse):
+    """Generate a new dataset name based on the datasets to fuse."""
     return "_".join([dataset.split(".")[0] for dataset in datasets_to_fuse])
 
 def update_fuse_on(i, option):
+    """Update the fuse on for a specific process."""
     st.session_state.temp_fusions[fusion][i]["fuse_on"] = option
 
 def update_fuse_by(i, option):
+    """Update the fuse by for a specific process."""
     if option != "--Select an option--":
         st.session_state.temp_fusions[fusion][i]["fuse_by"] = option
 
 
 def update_fusion_name(i, name):
+    """Update the fusion name for a specific process."""
     if name != "":
         st.session_state.temp_fusions[fusion][i]["fused_dataset_name"] = name
 

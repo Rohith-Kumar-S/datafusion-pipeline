@@ -11,6 +11,7 @@ if not st.session_state.pipelines:
 
 
 def add_layer(pipeline):
+    """Add a new layer to the pipeline."""
     st.session_state.temp_pipelines[pipeline].append(
         {
             "layer_type": "",
@@ -20,10 +21,12 @@ def add_layer(pipeline):
 
 
 def update_layer_type(i, pipeline, option):
+    """Update the layer type for a specific layer in the pipeline."""
     if option != "-- Select an option --":
         st.session_state.temp_pipelines[pipeline][i]["layer_type"] = option
 
 def update_layer_selection(i, pipeline, layer_selection):
+    """Update the layer selection for a specific layer in the pipeline."""
     if layer_selection != "-- Select an option --":
         st.session_state.temp_pipelines[pipeline][i][
             "layer_selection"

@@ -121,6 +121,7 @@ class PipelineUtils:
         return csv_file_name
 
     def detect_source_type(self, url):
+        """Detect the source type from the URL and import the data accordingly."""
         parsed = urlparse(url)
         host = parsed.netloc.lower()
         path = parsed.path.lower()
@@ -133,12 +134,18 @@ class PipelineUtils:
             print("not a kaggle link:", url)
 
     def random_table_name(self, prefix="table_", length=8):
+        """
+        Generate a random table name.
+        """
         suffix = "".join(
             random.choices(string.ascii_lowercase + string.digits, k=length)
         )
         return prefix + suffix
 
     def update_data_state_variables(self, dataset_name, data, from_ui=False):
+        """
+        Update the data state variables for a specific dataset.
+        """
         view_name = (
             "_".join(dataset_name.lower().split(" "))
             .replace("-", "_")
@@ -153,6 +160,9 @@ class PipelineUtils:
             self.temp_datasets_state[dataset_name].createOrReplaceTempView(view_name)
 
     def import_data(self, value, import_type, from_ui=True):
+        """
+        Import data from various sources.
+        """
         dataframe_names = []
         query_params = []
         if import_type == "Link":
@@ -230,9 +240,15 @@ class PipelineUtils:
         return True, dataframe_names
 
     def reset_views(self, dataset_name):
+        """
+        Reset the views for a specific dataset.
+        """
         self.temp_datasets_state[dataset_name] = self.datasets_state[dataset_name]
 
     def apply_condition(self, dataset_name, filter_source, filter_operator, filter_value, operation = 'filter',value_to_set=None, column_name=None):
+        """
+        Apply a condition to a specific dataset.
+        """
         if column_name in self.temp_datasets_state[dataset_name].columns:
             fallback = F.col(column_name)
         else:
@@ -410,6 +426,9 @@ class PipelineUtils:
                     )
 
     def test_rule(self, rule, from_ui=True):
+        """
+        Test a set of rules against the current dataset state.
+        """
         for dataset_name, processes in rule.items():
             self.reset_views(dataset_name)
             for process in processes:
@@ -657,6 +676,9 @@ class PipelineUtils:
         return True
 
     def get_fusable_columns(self, datasets):
+        """
+        Get the columns that can be fused from the given datasets.
+        """
         dataset = datasets[0]
         fusable_columns = []
         for dtype in self.temp_datasets_state[dataset].dtypes:
@@ -672,6 +694,9 @@ class PipelineUtils:
     def fuse_datasets(
         self, fusion_name, datasets_to_fuse, fuse_by=None, fuse_on=None, fuse_how="inner"
     ):
+        """
+        Fuse multiple datasets into a single dataset.
+        """
         print(
             f"Fusion dataset: {fusion_name} with datasets: {datasets_to_fuse} by {fuse_by} on {fuse_on} with how {fuse_how}",
             flush=True,
@@ -690,6 +715,9 @@ class PipelineUtils:
         self.temp_datasets_state[fusion_name] = dataset_1
 
     def export_datasets(self, export_data):
+        """
+        Export datasets to various formats.
+        """
         print(
             f"Exporting datasets: ###################################################",
             flush=True,
@@ -773,9 +801,15 @@ class PipelineUtils:
         return paths, query
 
     def test_spark(self):
+        """
+        Test the Spark session.
+        """
         print(self.spark_session_state)
 
     def load_input_sources(self, read_only=False):
+        """
+        Load input sources from the database.
+        """
         input_key = None
         input_sources = self.pipeline_db.input_sources
         if not read_only and not list(input_sources.find()):
@@ -787,6 +821,9 @@ class PipelineUtils:
         return input_key, input_sources
 
     def load_rules(self, input_source=None, read_only=False):
+        """
+        Load rules from the database.
+        """
         rules_key = None
         if input_source!=None:
             db_rules = self.pipeline_db.db_rules
@@ -805,6 +842,9 @@ class PipelineUtils:
             return rules_key, db_rules
 
     def load_fusions(self, input_source=None, read_only=False):
+        """
+        Load fusion configurations from the database.
+        """
         fusions_key = None
         if input_source !=None:
             db_fusions = self.pipeline_db.db_fusions
@@ -823,6 +863,9 @@ class PipelineUtils:
             return fusions_key, db_fusions
 
     def load_targets(self, input_source=None, read_only=False):
+        """
+        Load target configurations from the database.
+        """
         targets_key = None
         if input_source != None:
             db_targets = self.pipeline_db.db_targets
@@ -841,6 +884,9 @@ class PipelineUtils:
             return targets_key, db_targets
 
     def load_pipelines(self, read_only=False):
+        """
+        Load pipeline configurations from the database.
+        """
         pipe_key = None
         db_pipes = self.pipeline_db.db_pipes
         if not read_only and not list(db_pipes.find()):
@@ -852,6 +898,9 @@ class PipelineUtils:
         return pipe_key, db_pipes
 
     def load_active_streams(self):
+        """
+        Load active pipeline streams from the database.
+        """
         active_streams = {}
         db_active_pipe_streams = self.pipeline_db.db_active_pipe_streams
         if not list(db_active_pipe_streams.find()):

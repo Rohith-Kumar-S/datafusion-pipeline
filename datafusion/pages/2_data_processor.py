@@ -45,6 +45,7 @@ reverse_dtypes_map = {v: k for k, v in dtypes_map.items()}
 
 
 def update_data_source(rule, selected_dataset, index,  data_key=None, data_reference=None):
+    """Update the data source for a specific rule and dataset."""
     if data_reference is not None and data_reference.startswith("--Select a"):
         return
     
@@ -77,6 +78,7 @@ def update_data_source(rule, selected_dataset, index,  data_key=None, data_refer
         st.session_state.new_columns[rule][selected_dataset].append(data_reference)
 
 def update_column_to_drop(rule, selected_dataset, index, data_reference=None):
+    """Update the column to drop for a specific rule and dataset."""
     if "All" in data_reference and len(data_reference) != 1:
         data_reference.remove("All")
     st.session_state.temp_rules[rule][selected_dataset][index]["data_map"][

@@ -2,12 +2,17 @@ from pipeline_utils import PipelineUtils
 from pyspark.sql import SparkSession
 
 
-def Spark_Data_Fusion():  
+def Spark_Data_Fusion():
+    """
+    Create a Spark session for the DataFusion application.
+    """
     return SparkSession.builder.appName("DataFusion").getOrCreate()
 
 
 class Pipeline:
-
+    """
+    A class representing a data pipeline.
+    """
     def __init__(self, spark=None):
         self.pipeline = []
         self.spark = spark

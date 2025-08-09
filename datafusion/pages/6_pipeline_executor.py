@@ -45,10 +45,14 @@ with col2:
     )
 
 def execute(selected_pipeline):
+    """Execute the selected pipeline."""
     st.session_state.allowed_pipes.remove(selected_pipeline)
     st.session_state.pipes.append(selected_pipeline)
     
 def generate_pipeline_data(selected_pipeline):
+    """
+    Generate the pipeline data for the selected pipeline.
+    """
     pipeline_data = copy.deepcopy(pipeline_utils.get_pipelines()[selected_pipeline])
     input_selected = pipeline_utils.get_pipelines()[selected_pipeline][0].get(
         "layer_selection", None
@@ -77,6 +81,9 @@ def generate_pipeline_data(selected_pipeline):
     return pipeline_data, is_part_of_stream
 
 def execute_pipeline(selected_pipeline, pipeline_data, j, progress_data, exported_paths, query, spark):
+    """
+    Execute the selected pipeline.
+    """
     engine = Pipeline(spark=spark)
     progress_data[j] = {"progress":10, "status": f"Pipeline {selected_pipeline} initiated!"}
     engine.execute(pipeline_data, j, progress_data)
@@ -89,14 +96,10 @@ def execute_pipeline(selected_pipeline, pipeline_data, j, progress_data, exporte
     progress_data[j] = {"progress":100, "status": f"Pipeline {selected_pipeline} executed successfully."}
     print("exported_paths: ", exported_paths, flush=True)
     
-def print_cube(n, i, progress_data):
-    print(f"Operation {i+1} started", flush=True)
-    for j in range(1, n + 1):
-        time.sleep(0.08)
-    progress_data[i] = 100
-    print(f"Operation {i+1} completed", flush=True)
-    
 def custom_progress_bar(label):
+    """
+    Display a custom progress bar with a label.
+    """
     st.write(f"**{label}**")
     st.markdown("""
     <style>
@@ -119,6 +122,9 @@ def custom_progress_bar(label):
     """, unsafe_allow_html=True)
     
 def standard_progress_bar(label,percent):
+    """
+    Display a standard progress bar with a label.
+    """
     st.write(f"**{label}**")
     st.markdown(f"""
         <div style="width: 100%; background-color: #2b2b2b; border-radius: 10px; margin-bottom: 10px;">
@@ -133,6 +139,9 @@ def standard_progress_bar(label,percent):
         """, unsafe_allow_html=True)
     
 def stop_stream(i, pipe):
+    """
+    Stop the stream for a specific pipeline.
+    """
     if st.session_state.query.get(i, None) is not None:
         st.session_state.query[i].stop()
         st.session_state.query[i] = None
