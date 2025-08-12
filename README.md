@@ -208,15 +208,6 @@ table_name = "processed_sensor_data"
 - Persistent execution (survives application restarts)
 - Low-latency data transformation
 
-
-## 🛡️ Error Handling \& Monitoring
-
-- **Real-time Status**: Live pipeline execution monitoring
-- **Error Logging**: Comprehensive error tracking and reporting
-- **Data Quality**: Built-in validation and quality checks
-- **Recovery**: Automatic retry mechanisms for failed operations
-
-
 ## 🧪 Testing with Sample Data
 
 The project includes sample IoT datasets for testing:
@@ -224,15 +215,6 @@ The project includes sample IoT datasets for testing:
 - Customer data (CI00100-CI00150)
 - Device information (D000-D050)
 - Sensor readings with temperature, status, and timestamp data
-
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature/new-feature`)
-5. Create a Pull Request
 
 ## 🔧 Technologies Used
 
