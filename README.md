@@ -58,7 +58,7 @@ DataFusion Pipeline Architecture
 1. **Clone the repository**
 ```bash
 git clone https://github.com/Rohith-Kumar-S/datafusion-pipeline.git
-cd datafusion
+cd datafusion-pipeline
 ```
 
 2. **Launch the application**
