@@ -2,7 +2,7 @@
 
 A comprehensive rule-based data integration platform that enables users to build and execute scalable data processing pipelines through an intuitive user interface. The system supports both real-time streaming and batch processing with distributed computing capabilities.
 
-## 🚀 Features
+## Features
 
 ### Core Capabilities
 
@@ -22,7 +22,7 @@ A comprehensive rule-based data integration platform that enables users to build
 - **Interactive Dashboard**: Streamlit-based user interface for configuration and monitoring
 
 
-## 🏗️ Architecture
+## Architecture
 
 The system follows a modular microservices architecture with the following components:
 
@@ -43,7 +43,7 @@ DataFusion Pipeline Architecture
 3. **Pipeline Building**: Components are linked with hierarchical relationships
 4. **Execution**: Parallel processing with persistent streaming support
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Docker and Docker Compose
 - Python 3.8+
@@ -51,13 +51,13 @@ DataFusion Pipeline Architecture
 - Network access for external data sources
 
 
-## 🛠️ Installation \& Setup
+## Installation \& Setup
 
 ### Quick Start with Docker
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/Rohith-Kumar-S/datafusion-pipeline.git
 cd datafusion
 ```
 
@@ -72,22 +72,7 @@ docker-compose up -d
 - The Streamlit interface will load with configuration pages
 
 
-### Manual Setup
-
-1. **Install dependencies**
-```bash
-cd datafusion
-pip install -r requirements.txt
-```
-
-2. **Start MongoDB** (ensure MongoDB is running locally or update connection string)
-3. **Run the application**
-```bash
-streamlit run app.py
-```
-
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 datafusion/
@@ -111,16 +96,16 @@ README.md                        # Project documentation
 ```
 
 
-## 🔧 Usage
+## Usage
 
-### 1. Configure Input Sources
+### Configure Input Sources
 
 - Navigate to **Data Ingestion** page
 - Add data sources (Kaggle links, GitHub repositories, or Kafka topics)
 - Configure connection parameters and data schemas
 
 
-### 2. Define Processing Rules
+### Define Processing Rules
 
 - Go to **Data Processor** page
 - Create transformation rules using available operations:
@@ -134,14 +119,14 @@ README.md                        # Project documentation
     - **Save**: Persist intermediate results
 
 
-### 3. Set Up Data Fusion
+### Set Up Data Fusion
 
-- Access **Data Unifier** page
+- Access **Data Merge** page
 - Configure join operations between different data sources
 - Define join keys and relationship types
 
 
-### 4. Configure Output Destinations
+### Configure Output Destinations
 
 - Visit **Data Sinker** page
 - Set up output targets:
@@ -150,14 +135,14 @@ README.md                        # Project documentation
     - RDBMS tables (via JDBC)
 
 
-### 5. Build and Execute Pipelines
+### Build and Execute Pipelines
 
 - Use **Pipeline Builder** to assemble components
 - Execute pipelines through **Pipeline Executer**
 - Monitor real-time processing status and logs
 
 
-## 🔄 Data Processing Operations
+## Data Processing Operations
 
 The rule engine supports the following transformation operations:
 
@@ -173,7 +158,7 @@ The rule engine supports the following transformation operations:
 | **Flatten** | Normalize nested data | API response processing |
 | **Save** | Persist intermediate data | Checkpoint creation |
 
-## 🔗 Integration Examples
+## Integration Examples
 
 ### Kafka Streaming Integration
 
@@ -193,7 +178,7 @@ table_name = "processed_sensor_data"
 ```
 
 
-## 🚦 Pipeline Execution Modes
+## Pipeline Execution Modes
 
 ### Batch Processing
 
@@ -201,14 +186,13 @@ table_name = "processed_sensor_data"
 - Optimal for large historical data analysis
 - Terminates upon completion
 
-
 ### Stream Processing
 
 - Continuous real-time data processing
 - Persistent execution (survives application restarts)
 - Low-latency data transformation
 
-## 🧪 Testing with Sample Data
+## Testing with Sample Data
 
 The project includes sample IoT datasets for testing:
 
@@ -216,7 +200,7 @@ The project includes sample IoT datasets for testing:
 - Device information (D000-D050)
 - Sensor readings with temperature, status, and timestamp data
 
-## 🔧 Technologies Used
+## Technologies Used
 
 - **Backend**: Apache Spark (PySpark), Python 3.8+
 - **Streaming**: Apache Kafka
